@@ -1,0 +1,12 @@
+
+## Build
+/dl/
+/doc/
+/inst/
+/llvm/
+/mingw-build/
+/build
+/dist/
+/unicode-downloads
+/target
+/library/target
