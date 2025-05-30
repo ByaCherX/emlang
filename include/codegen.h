@@ -6,10 +6,20 @@
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Value.h>
 #include <llvm/IR/Type.h>
+#include <llvm/IR/LegacyPassManager.h>
+#include <llvm/IR/PassManager.h>
 #include <map>
 #include <memory>
 
 namespace emlang {
+
+// Optimization levels
+enum class OptimizationLevel {
+    None = 0,
+    O1 = 1,
+    O2 = 2,
+    O3 = 3
+};
 
 // LLVM Code Generator sınıfı
 class CodeGenerator : public ASTVisitor {
@@ -25,6 +35,9 @@ private:
     // Current function being compiled
     llvm::Function* currentFunction;
     
+    // Optimization level
+    OptimizationLevel optimizationLevel;
+    
     // Type mapping
     llvm::Type* getLLVMType(const std::string& typeName);
     llvm::Type* getNumberType();
@@ -34,8 +47,11 @@ private:
     // Helper methods
     llvm::Value* createEntryBlockAlloca(llvm::Function* function, const std::string& varName, llvm::Type* type);
     
+    // Optimization passes
+    void runOptimizationPasses();
+    
 public:
-    CodeGenerator(const std::string& moduleName);
+    CodeGenerator(const std::string& moduleName, OptimizationLevel optLevel = OptimizationLevel::None);
     ~CodeGenerator() = default;
     
     // Generate LLVM IR from AST
@@ -52,6 +68,12 @@ public:
     
     // JIT compile and execute
     int executeMain();
+    
+    // Set optimization level
+    void setOptimizationLevel(OptimizationLevel level);
+    
+    // Get optimization level
+    OptimizationLevel getOptimizationLevel() const;
     
     // AST Visitor methods
     void visit(LiteralExpression& node) override;

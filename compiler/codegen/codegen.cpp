@@ -60,6 +60,11 @@ llvm::Value* CodeGenerator::createEntryBlockAlloca(llvm::Function* function, con
 
 void CodeGenerator::generateIR(Program& program) {
     program.accept(*this);
+    
+    // Run optimization passes if requested
+    if (optimizationLevel != OptimizationLevel::None) {
+        runOptimizationPasses();
+    }
 }
 
 llvm::Module* CodeGenerator::getModule() const {
@@ -455,6 +460,55 @@ void CodeGenerator::visit(Program& node) {
 void CodeGenerator::error(const std::string& message) const {
     std::cerr << "CodeGen Error: " << message << std::endl;
     throw std::runtime_error("Code generation error: " + message);
+}
+
+void CodeGenerator::runOptimizationPasses() {
+    // Create a legacy pass manager for function optimization
+    auto functionPassManager = std::make_unique<llvm::legacy::FunctionPassManager>(module.get());
+    auto modulePassManager = std::make_unique<llvm::legacy::PassManager>();
+    
+    // Add optimization passes based on level
+    switch (optimizationLevel) {
+        case OptimizationLevel::O1:
+            // Basic optimizations
+            functionPassManager->add(llvm::createInstructionCombiningPass());
+            functionPassManager->add(llvm::createReassociatePass());
+            functionPassManager->add(llvm::createGVNPass());
+            functionPassManager->add(llvm::createCFGSimplificationPass());
+            break;
+              case OptimizationLevel::O2:
+            // More aggressive optimizations
+            functionPassManager->add(llvm::createInstructionCombiningPass());
+            functionPassManager->add(llvm::createReassociatePass());
+            functionPassManager->add(llvm::createGVNPass());
+            functionPassManager->add(llvm::createCFGSimplificationPass());
+            functionPassManager->add(llvm::createPromoteMemoryToRegisterPass());
+            // Note: Some legacy passes may not be available in LLVM 20
+            break;
+              case OptimizationLevel::O3:
+            // Aggressive optimizations
+            functionPassManager->add(llvm::createInstructionCombiningPass());
+            functionPassManager->add(llvm::createReassociatePass());
+            functionPassManager->add(llvm::createGVNPass());
+            functionPassManager->add(llvm::createCFGSimplificationPass());
+            functionPassManager->add(llvm::createPromoteMemoryToRegisterPass());
+            functionPassManager->add(llvm::createTailCallEliminationPass());
+            modulePassManager->add(llvm::createAlwaysInlinerLegacyPass());
+            break;
+            
+        default:
+            return; // No optimization
+    }
+    
+    // Initialize and run function passes
+    functionPassManager->doInitialization();
+    for (auto& function : *module) {
+        functionPassManager->run(function);
+    }
+    functionPassManager->doFinalization();
+    
+    // Run module passes
+    modulePassManager->run(*module);
 }
 
 } // namespace emlang
