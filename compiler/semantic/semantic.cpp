@@ -87,6 +87,12 @@ bool SemanticAnalyzer::isCompatibleType(const std::string& expected, const std::
     // Special case: allow "boolean" literals to be assigned to "bool" type
     if (actual == "boolean" && expected == "bool") return true;
     
+    // Special case: allow "char" literals to be assigned to "char" type
+    if (actual == "char" && expected == "char") return true;
+    
+    // Special case: allow "string" literals to be assigned to "str" type
+    if (actual == "string" && expected == "str") return true;
+    
     // Special case: allow "string" literals to be assigned to "char" (single character)
     if (actual == "string" && expected == "char") return true;
     
@@ -245,6 +251,9 @@ void SemanticAnalyzer::visit(LiteralExpression& node) {
             break;
         case LiteralExpression::LiteralType::STRING:
             currentExpressionType = "string";
+            break;
+        case LiteralExpression::LiteralType::CHAR:
+            currentExpressionType = "char";
             break;
         case LiteralExpression::LiteralType::BOOLEAN:
             currentExpressionType = "boolean";

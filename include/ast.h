@@ -68,10 +68,11 @@ public:
 
 // Literal Expression
 class LiteralExpression : public Expression {
-public:
+public:    
     enum class LiteralType {
         NUMBER,
         STRING,
+        CHAR,
         BOOLEAN,
         NULL_LITERAL
     };

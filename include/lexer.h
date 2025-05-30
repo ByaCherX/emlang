@@ -7,10 +7,11 @@
 namespace emlang {
 
 // Token türleri
-enum class TokenType {
+enum class TokenType {    
     // Literals
     NUMBER,
     STRING,
+    CHAR_LITERAL,
     IDENTIFIER,
     
     // Keywords
@@ -25,7 +26,8 @@ enum class TokenType {
     TRUE,
     FALSE,
     NULL_TOKEN,
-      // C-style primitive type keywords
+
+    // C-style primitive type keywords
     INT8,      // int8 signed 8-bit integer
     INT16,     // int16 signed 16-bit integer  
     INT32,     // int32 signed 32-bit integer
@@ -41,7 +43,7 @@ enum class TokenType {
     CHAR,      // char Unicode scalar value
     STR,       // str string slice
     BOOL,      // bool boolean type
-    
+
     // Operators
     PLUS,
     MINUS,
@@ -58,6 +60,7 @@ enum class TokenType {
     LOGICAL_AND,
     LOGICAL_OR,
     LOGICAL_NOT,
+    AMPERSAND,     // & address-of operator
     
     // Delimiters
     SEMICOLON,
@@ -104,9 +107,9 @@ private:
     
     void advance();
     void skipWhitespace();
-    void skipComment();
-    std::string readNumber();
+    void skipComment();    std::string readNumber();
     std::string readString();
+    std::string readCharLiteral();
     std::string readIdentifier();
     TokenType getKeywordType(const std::string& identifier);
     

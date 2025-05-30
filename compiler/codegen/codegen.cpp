@@ -178,6 +178,11 @@ llvm::Type* CodeGenerator::getCharType() {
     return llvm::Type::getInt32Ty(*context); // Unicode scalar value
 }
 
+// String slice type
+llvm::Type* CodeGenerator::getStrType() {
+    return llvm::PointerType::get(llvm::Type::getInt8Ty(*context), 0); // str as i8*
+}
+
 // Unit type
 llvm::Type* CodeGenerator::getUnitType() {
     return llvm::Type::getVoidTy(*context);
@@ -273,6 +278,43 @@ void CodeGenerator::visit(LiteralExpression& node) {
         case LiteralExpression::LiteralType::STRING:
             currentValue = builder->CreateGlobalStringPtr(node.value, "str");
             break;
+        case LiteralExpression::LiteralType::CHAR: {
+            // Handle character literal
+            uint32_t charValue = 0;
+            if (node.value.length() == 1) {
+                // Simple ASCII character
+                charValue = static_cast<uint32_t>(node.value[0]);
+            } else if (node.value.substr(0, 3) == "\\u{" && node.value.back() == '}') {
+                // Unicode escape sequence \u{XXXX}
+                std::string hexCode = node.value.substr(3, node.value.length() - 4);
+                try {
+                    charValue = std::stoul(hexCode, nullptr, 16);
+                } catch (const std::exception& e) {
+                    error("Invalid Unicode escape sequence: " + node.value);
+                    charValue = 0;
+                }            
+            } else if (node.value.length() == 2 && node.value[0] == '\\') {
+                // Escape sequences
+                switch (node.value[1]) {
+                    case 'n': charValue = '\n'; break;
+                    case 't': charValue = '\t'; break;
+                    case 'r': charValue = '\r'; break;
+                    case '\\': charValue = '\\'; break;
+                    case '\'': charValue = '\''; break;
+                    case '"': charValue = '"'; break;
+                    case '0': charValue = '\0'; break;
+                    default:
+                        error("Invalid escape sequence: " + node.value);
+                        charValue = 0;
+                        break;
+                }
+            } else {
+                error("Invalid character literal: " + node.value);
+                charValue = 0;
+            }
+            currentValue = llvm::ConstantInt::get(*context, llvm::APInt(32, charValue));
+            break;
+        }
         case LiteralExpression::LiteralType::BOOLEAN:
             currentValue = llvm::ConstantInt::get(*context, llvm::APInt(1, node.value == "true" ? 1 : 0));
             break;        case LiteralExpression::LiteralType::NULL_LITERAL:

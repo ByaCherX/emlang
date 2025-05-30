@@ -377,10 +377,15 @@ ExpressionPtr Parser::parsePrimary() {
         Token token = tokens[current - 1];
         return std::make_unique<LiteralExpression>(LiteralExpression::LiteralType::NUMBER, token.value, token.line, token.column);
     }
-    
+
     if (match(TokenType::STRING)) {
         Token token = tokens[current - 1];
         return std::make_unique<LiteralExpression>(LiteralExpression::LiteralType::STRING, token.value, token.line, token.column);
+    }
+    
+    if (match(TokenType::CHAR_LITERAL)) {
+        Token token = tokens[current - 1];
+        return std::make_unique<LiteralExpression>(LiteralExpression::LiteralType::CHAR, token.value, token.line, token.column);
     }
     
     if (match(TokenType::IDENTIFIER)) {

@@ -14,10 +14,10 @@ std::string Token::toString() const {
     return tokenTypeToString(type) + "(" + value + ") at " + std::to_string(line) + ":" + std::to_string(column);
 }
 
-std::string Token::tokenTypeToString(TokenType type) {
-    static const std::map<TokenType, std::string> tokenNames = {
+std::string Token::tokenTypeToString(TokenType type) {    static const std::map<TokenType, std::string> tokenNames = {
         {TokenType::NUMBER, "NUMBER"},
         {TokenType::STRING, "STRING"},
+        {TokenType::CHAR_LITERAL, "CHAR_LITERAL"},
         {TokenType::IDENTIFIER, "IDENTIFIER"},
         {TokenType::LET, "LET"},
         {TokenType::CONST, "CONST"},
@@ -142,10 +142,9 @@ std::string Lexer::readNumber() {
 
 std::string Lexer::readString() {
     std::string str;
-    char quote = currentChar;
-    advance(); // skip opening quote
+    advance(); // skip opening double quote
     
-    while (currentChar != '\0' && currentChar != quote) {
+    while (currentChar != '\0' && currentChar != '"') {
         if (currentChar == '\\') {
             advance();
             switch (currentChar) {
@@ -247,11 +246,16 @@ Token Lexer::nextToken() {
             std::string number = readNumber();
             return Token(TokenType::NUMBER, number, tokenLine, tokenColumn);
         }
-        
-        // Strings
-        if (currentChar == '"' || currentChar == '\'') {
+          // Strings (double quotes)
+        if (currentChar == '"') {
             std::string str = readString();
             return Token(TokenType::STRING, str, tokenLine, tokenColumn);
+        }
+        
+        // Character literals (single quotes)
+        if (currentChar == '\'') {
+            std::string charLit = readCharLiteral();
+            return Token(TokenType::CHAR_LITERAL, charLit, tokenLine, tokenColumn);
         }
         
         // Identifiers and keywords
@@ -344,6 +348,95 @@ std::vector<Token> Lexer::tokenize() {
 void Lexer::error(const std::string& message) {
     std::cerr << "Lexer Error at " << line << ":" << column << " - " << message << std::endl;
     throw std::runtime_error("Lexer error: " + message);
+}
+
+std::string Lexer::readCharLiteral() {
+    std::string charStr;
+    advance(); // skip opening single quote
+    
+    if (currentChar == '\0') {
+        error("Unterminated character literal");
+        return "";
+    }
+    
+    if (currentChar == '\'') {
+        error("Empty character literal");
+        return "";
+    }
+      if (currentChar == '\\') {
+        advance();
+        switch (currentChar) {
+            case 'n': charStr = "\\n"; break;
+            case 't': charStr = "\\t"; break;
+            case 'r': charStr = "\\r"; break;
+            case '\\': charStr = "\\\\"; break;
+            case '\'': charStr = "\\'"; break;
+            case '"': charStr = "\\\""; break;
+            case '0': charStr = "\\0"; break;
+            case 'u': {
+                // Unicode escape sequence \u{XXXX}
+                advance();
+                if (currentChar != '{') {
+                    error("Expected '{' after \\u in Unicode escape");
+                    return "";
+                }
+                advance();
+                
+                std::string hexCode;
+                while (currentChar != '\0' && currentChar != '}' && hexCode.length() < 8) {
+                    if (std::isxdigit(currentChar)) {
+                        hexCode += currentChar;
+                        advance();
+                    } else {
+                        error("Invalid hex digit in Unicode escape");
+                        return "";
+                    }
+                }
+                
+                if (currentChar != '}') {
+                    error("Unterminated Unicode escape sequence");
+                    return "";
+                }
+                
+                if (hexCode.empty()) {
+                    error("Empty Unicode escape sequence");
+                    return "";
+                }
+                
+                // Convert hex to Unicode scalar value
+                try {
+                    unsigned long codepoint = std::stoul(hexCode, nullptr, 16);
+                    if (codepoint > 0x10FFFF) {
+                        error("Unicode codepoint out of range");
+                        return "";
+                    }
+                    // For now, just store the hex value as string
+                    charStr = "\\u{" + hexCode + "}";
+                } catch (const std::exception& e) {
+                    error("Invalid Unicode escape sequence");
+                    return "";
+                }
+                break;
+            }
+            default:
+                error("Invalid escape sequence in character literal");
+                return "";
+        }
+        advance();
+    } else {
+        // Regular character
+        charStr = currentChar;
+        advance();
+    }
+    
+    if (currentChar == '\'') {
+        advance(); // skip closing quote
+    } else {
+        error("Unterminated character literal");
+        return "";
+    }
+    
+    return charStr;
 }
 
 } // namespace emlang

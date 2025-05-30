@@ -24,6 +24,7 @@ std::string LiteralExpression::toString() const {
     switch (literalType) {
         case LiteralType::NUMBER: typeStr = "NUMBER"; break;
         case LiteralType::STRING: typeStr = "STRING"; break;
+        case LiteralType::CHAR: typeStr = "CHAR"; break;
         case LiteralType::BOOLEAN: typeStr = "BOOLEAN"; break;
         case LiteralType::NULL_LITERAL: typeStr = "NULL"; break;
     }

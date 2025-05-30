@@ -57,9 +57,11 @@ private:
     
     // C-style primitive float types
     llvm::Type* getFloatType();
-    llvm::Type* getDoubleType();
-      // Other primitive types
+    llvm::Type* getDoubleType();    
+    
+    // Other primitive types
     llvm::Type* getCharType();
+    llvm::Type* getStrType();
     llvm::Type* getUnitType();
     
     // Helper methods for type checking
@@ -103,7 +105,7 @@ public:
     
     // AST Visitor methods
     void visit(LiteralExpression& node) override;
-    void visit(IdentifierExpression& node) override;
+    void visit(IdentifierExpression& node) override;    
     void visit(BinaryOpExpression& node) override;
     void visit(UnaryOpExpression& node) override;
     void visit(FunctionCallExpression& node) override;
