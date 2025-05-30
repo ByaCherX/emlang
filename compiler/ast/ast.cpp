@@ -132,6 +132,29 @@ void FunctionDeclaration::accept(ASTVisitor& visitor) {
     visitor.visit(*this);
 }
 
+// ExternFunctionDeclaration
+ExternFunctionDeclaration::ExternFunctionDeclaration(const std::string& name, std::vector<Parameter> params, const std::string& retType, size_t line, size_t column)
+    : Statement(ASTNodeType::EXTERN_FUNCTION_DECLARATION, line, column), name(name), parameters(std::move(params)), returnType(retType) {}
+
+std::string ExternFunctionDeclaration::toString() const {
+    std::stringstream ss;
+    ss << "ExternFunctionDecl(extern " << name << "(";
+    for (size_t i = 0; i < parameters.size(); ++i) {
+        if (i > 0) ss << ", ";
+        ss << parameters[i].name << ": " << parameters[i].type;
+    }
+    ss << ")";
+    if (!returnType.empty()) {
+        ss << ": " << returnType;
+    }
+    ss << ")";
+    return ss.str();
+}
+
+void ExternFunctionDeclaration::accept(ASTVisitor& visitor) {
+    visitor.visit(*this);
+}
+
 // BlockStatement
 BlockStatement::BlockStatement(std::vector<StatementPtr> stmts, size_t line, size_t column)
     : Statement(ASTNodeType::BLOCK_STATEMENT, line, column), statements(std::move(stmts)) {}

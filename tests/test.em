@@ -1,18 +1,18 @@
 // EMLang test program
 // This is a comment
 
-let x: number = 42;
-const message: string = "Hello, EMLang!";
+let x: int32 = 42;
 
-function fibonacci(n: number): number {
+function fibonacci(n: int32): int32 {
     if (n <= 1) {
         return n;
     }
     return fibonacci(n - 1) + fibonacci(n - 2);
 }
 
-function main(): number {
-    let result: number = fibonacci(10);
+function main(): int8 {
+    let myNum = 10;
+    let result: int32 = fibonacci(myNum);
     
     if (result > 50) {
         return 1;
@@ -21,4 +21,5 @@ function main(): number {
     }
 }
 
-let finalResult: number = main();
+let finalResult: int32 = main();
+

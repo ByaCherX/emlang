@@ -21,6 +21,19 @@
 
 #pragma once
 
+// DLL Export/Import Macros for Windows
+#ifdef _WIN32
+    #ifdef EMLANG_EXPORTS
+        #define EMLANG_API __declspec(dllexport)
+    #elif defined(EMLANG_DLL)
+        #define EMLANG_API __declspec(dllimport)
+    #else
+        #define EMLANG_API
+    #endif
+#else
+    #define EMLANG_API
+#endif
+
 #include "lexer.h"
 #include "ast.h"
 #include <vector>
@@ -74,7 +87,7 @@ namespace emlang {
  * std::unique_ptr<Program> ast = parser.parse();
  * @endcode
  */
-class Parser {
+class EMLANG_API Parser {
 private:
     std::vector<Token> tokens;   // Complete token sequence from lexer
     size_t current;              // Index of current token being processed (0-based)
@@ -252,6 +265,24 @@ private:
      * - Creates FunctionDeclaration AST node
      */
     StatementPtr parseFunctionDeclaration();
+    
+    /**
+     * @brief Parses external function declarations
+     * @return StatementPtr to ExternFunctionDeclaration AST node
+     * 
+     * Handles external function declaration syntax:
+     * ```
+     * extern function name(param1: type1, param2: type2): returnType;
+     * ```
+     * 
+     * The method parses:
+     * - Function name identifier
+     * - Parameter list with types
+     * - Optional return type annotation
+     * - Semicolon termination (no body)
+     * - Creates ExternFunctionDeclaration AST node
+     */
+    StatementPtr parseExternFunctionDeclaration();
     
     /**
      * @brief Parses if/else conditional statements

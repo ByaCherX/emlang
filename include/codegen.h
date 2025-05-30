@@ -55,7 +55,29 @@
 
 #pragma once
 
+// DLL Export/Import Macros for Windows
+#ifdef _WIN32
+    #ifdef EMLANG_EXPORTS
+        #define EMLANG_API __declspec(dllexport)
+    #elif defined(EMLANG_DLL)
+        #define EMLANG_API __declspec(dllimport)
+    #else
+        #define EMLANG_API
+    #endif
+#else
+    #define EMLANG_API
+#endif
+
 #include "ast.h"
+
+// Disable LLVM warnings
+#ifdef _MSC_VER
+    #pragma warning(push)
+    #pragma warning(disable: 4624) // destructor was implicitly deleted
+    #pragma warning(disable: 4244) // conversion warnings
+    #pragma warning(disable: 4267) // size_t conversion warnings
+#endif
+
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
@@ -63,6 +85,12 @@
 #include <llvm/IR/Type.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/PassManager.h>
+
+// Re-enable warnings
+#ifdef _MSC_VER
+    #pragma warning(pop)
+#endif
+
 #include <map>
 #include <memory>
 
@@ -91,7 +119,7 @@ namespace emlang {
  * - Instruction scheduling and selection
  */
 enum class OptimizationLevel {
-    None =    0x0,    ///< No optimizations applied (O0)
+    None =    0x0,      ///< No optimizations applied (O0)
     O1   =    0x1,      ///< Basic optimizations (-O1)
     O2   =    0x2,      ///< Standard optimizations (-O2) 
     O3   =    0x3       ///< Aggressive optimizations (-O3)
@@ -141,7 +169,7 @@ enum class OptimizationLevel {
  * - IRBuilder: Provides convenient instruction generation API
  * - PassManager: Handles optimization pass execution
  */
-class CodeGenerator : public ASTVisitor {
+class EMLANG_API CodeGenerator : public ASTVisitor {
 private:
     // ======================== LLVM CORE COMPONENTS ========================
     
@@ -668,6 +696,7 @@ public:
      * and conditional behavior in the code generator.
      */
     OptimizationLevel getOptimizationLevel() const;    
+    
     // ======================== AST VISITOR IMPLEMENTATION ========================
     // These methods implement the ASTVisitor interface to traverse the AST
     // and generate corresponding LLVM IR for each node type
@@ -792,6 +821,18 @@ public:
      * - Return instruction validation and insertion
      */
     void visit(FunctionDeclaration& node) override;
+    
+    /**
+     * @brief Generates LLVM IR for external function declarations
+     * @param node External function declaration node with signature (no body)
+     * 
+     * Creates LLVM function declarations for external library functions:
+     * - Function type construction from parameters and return type
+     * - External linkage function creation and registration in module
+     * - Symbol table registration for function calls
+     * - No body generation (declaration only)
+     */
+    void visit(ExternFunctionDeclaration& node) override;
     
     /**
      * @brief Generates LLVM IR for block statements

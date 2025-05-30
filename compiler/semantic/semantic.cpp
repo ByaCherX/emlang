@@ -424,6 +424,32 @@ void SemanticAnalyzer::visit(FunctionDeclaration& node) {
     exitScope();
 }
 
+void SemanticAnalyzer::visit(ExternFunctionDeclaration& node) {
+    // Check if function already exists in current scope
+    if (currentScope->existsInCurrentScope(node.name)) {
+        error("External function already declared: " + node.name, node.line, node.column);
+        return;
+    }
+    
+    // Validate parameter types
+    for (const auto& param : node.parameters) {
+        if (!isValidType(param.type)) {
+            error("Invalid parameter type '" + param.type + "' in external function " + node.name, node.line, node.column);
+            return;
+        }
+    }
+    
+    // Validate return type
+    if (!node.returnType.empty() && !isValidType(node.returnType)) {
+        error("Invalid return type '" + node.returnType + "' in external function " + node.name, node.line, node.column);
+        return;
+    }
+    
+    // Define external function in current scope
+    // External functions are marked as functions and constant (cannot be redefined)
+    currentScope->define(node.name, node.returnType, true, true, node.line, node.column);
+}
+
 void SemanticAnalyzer::visit(BlockStatement& node) {
     enterScope();
     
@@ -501,6 +527,30 @@ void SemanticAnalyzer::visit(AddressOfExpression& node) {
     
     // Address-of operation creates a pointer to the operand type
     currentExpressionType = makePointerType(operandType);
+}
+
+void SemanticAnalyzer::visit(ExternFunctionDeclaration& node) {
+    // Check if function name already exists in current scope
+    if (currentScope->lookup(node.name)) {
+        error("Function '" + node.name + "' is already declared", node.line, node.column);
+        return;
+    }
+    
+    // Validate parameter types
+    for (const auto& param : node.parameters) {
+        if (!isPrimitiveType(param.type) && !isPointerType(param.type)) {
+            error("Invalid parameter type '" + param.type + "' in extern function '" + node.name + "'", node.line, node.column);
+        }
+    }
+    
+    // Validate return type
+    if (!isPrimitiveType(node.returnType) && !isPointerType(node.returnType) && node.returnType != "void") {
+        error("Invalid return type '" + node.returnType + "' in extern function '" + node.name + "'", node.line, node.column);
+    }
+    
+    // Register extern function in symbol table
+    auto symbol = std::make_unique<Symbol>(node.name, node.returnType, true, true);
+    currentScope->define(node.name, std::move(symbol));
 }
 
 void SemanticAnalyzer::visit(Program& node) {

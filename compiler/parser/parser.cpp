@@ -104,6 +104,11 @@ StatementPtr Parser::parseStatement() {
             return parseFunctionDeclaration();
         }
         
+        if (match(TokenType::EXTERN)) {
+            current--; // Back up to re-read the token
+            return parseExternFunctionDeclaration();
+        }
+        
         if (match(TokenType::IF)) {
             current--; // Back up to re-read the token
             return parseIfStatement();
@@ -174,6 +179,31 @@ StatementPtr Parser::parseFunctionDeclaration() {
     auto body = parseBlockStatement();
     
     return std::make_unique<FunctionDeclaration>(name.value, std::move(parameters), returnType, std::move(body), name.line, name.column);
+}
+
+StatementPtr Parser::parseExternFunctionDeclaration() {
+    consume(TokenType::EXTERN, "Expected 'extern'");
+    consume(TokenType::FUNCTION, "Expected 'function' after 'extern'");
+    Token name = consume(TokenType::IDENTIFIER, "Expected function name");
+    
+    consume(TokenType::LEFT_PAREN, "Expected '(' after function name");
+    auto parameters = parseParameterList();
+    consume(TokenType::RIGHT_PAREN, "Expected ')' after parameters");
+    
+    std::string returnType;
+    if (match(TokenType::COLON)) {
+        returnType = parseType();
+    }
+    
+    consume(TokenType::SEMICOLON, "Expected ';' after extern function declaration");
+    
+    // Convert FunctionDeclaration::Parameter to ExternFunctionDeclaration::Parameter
+    std::vector<ExternFunctionDeclaration::Parameter> externParams;
+    for (const auto& param : parameters) {
+        externParams.push_back({param.name, param.type});
+    }
+    
+    return std::make_unique<ExternFunctionDeclaration>(name.value, std::move(externParams), returnType, name.line, name.column);
 }
 
 StatementPtr Parser::parseIfStatement() {
@@ -487,7 +517,8 @@ std::string Parser::parseType() {
 std::vector<FunctionDeclaration::Parameter> Parser::parseParameterList() {
     std::vector<FunctionDeclaration::Parameter> parameters;
     
-    if (!check(TokenType::RIGHT_PAREN)) {        do {
+    if (!check(TokenType::RIGHT_PAREN)) {        
+        do {
             Token name = consume(TokenType::IDENTIFIER, "Expected parameter name");
             consume(TokenType::COLON, "Expected ':' after parameter name");
             std::string type = parseType();

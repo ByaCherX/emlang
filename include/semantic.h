@@ -36,6 +36,19 @@
 #include <vector>
 #include <memory>
 
+// DLL Export/Import Macros for Windows
+#ifdef _WIN32
+    #ifdef EMLANG_EXPORTS
+        #define EMLANG_API __declspec(dllexport)
+    #elif defined(EMLANG_DLL)
+        #define EMLANG_API __declspec(dllimport)
+    #else
+        #define EMLANG_API
+    #endif
+#else
+    #define EMLANG_API
+#endif
+
 
 namespace emlang {
 
@@ -54,7 +67,7 @@ namespace emlang {
  * - Source location tracking for error reporting
  * - Scope-aware symbol resolution
  */
-struct Symbol {
+struct EMLANG_API Symbol {
     std::string name;       // The identifier name as it appears in source code
     std::string type;       // Type string (e.g., "int32", "str", "bool", "int32*")
     bool isConstant;        // true for 'const' declarations, false for 'let'
@@ -109,7 +122,7 @@ struct Symbol {
  * Symbol* symbol = functionScope.lookup("x");  // Lookup in current + parent scopes
  * @endcode
  */
-class Scope {
+class EMLANG_API Scope {
 private:
     std::map<std::string, std::unique_ptr<Symbol>> symbols;  // Symbol table for this scope
     Scope* parent;                                           // Parent scope (nullptr for global)
@@ -200,6 +213,17 @@ public:
      * navigation and cleanup operations.
      */
     Scope* getParent() const;
+
+    // Default destructor
+    ~Scope() = default;
+
+    // Delete copy operations (unique_ptr is not copyable)
+    Scope(const Scope&) = delete;
+    Scope& operator=(const Scope&) = delete;
+    
+    // Default move operations
+    Scope(Scope&&) = default;
+    Scope& operator=(Scope&&) = default;
 };
 
 /**
@@ -239,7 +263,7 @@ public:
  * }
  * @endcode
  */
-class SemanticAnalyzer : public ASTVisitor {
+class EMLANG_API SemanticAnalyzer : public ASTVisitor {
 private:
     std::vector<std::unique_ptr<Scope>> scopes;     // Stack of active scopes
     Scope* currentScope;                            // Currently active scope
@@ -523,6 +547,14 @@ public:
      * @brief Default destructor
      */
     ~SemanticAnalyzer() = default;
+
+    // Delete copy operations (unique_ptr is not copyable)
+    SemanticAnalyzer(const SemanticAnalyzer&) = delete;
+    SemanticAnalyzer& operator=(const SemanticAnalyzer&) = delete;
+    
+    // Default move operations
+    SemanticAnalyzer(SemanticAnalyzer&&) = default;
+    SemanticAnalyzer& operator=(SemanticAnalyzer&&) = default;
     
     // ======================== MAIN ANALYSIS INTERFACE ========================
     
@@ -668,6 +700,20 @@ public:
      * - Validates return statements against declared return type
      */
     void visit(FunctionDeclaration& node) override;
+    
+    /**
+     * @brief Visits an external function declaration
+     * @param node The ExternFunctionDeclaration AST node
+     * 
+     * This method:
+     * - Validates that the external function name is not already defined
+     * - Validates parameter types for correctness
+     * - Validates return type for correctness
+     * - Adds the external function symbol to the current scope
+     * - Ensures external functions don't conflict with regular functions
+     * - No function body analysis (external functions have no body)
+     */
+    void visit(ExternFunctionDeclaration& node) override;
     
     /**
      * @brief Visits a block statement (compound statement)

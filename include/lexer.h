@@ -21,6 +21,19 @@
 
 #pragma once
 
+// DLL Export/Import Macros for Windows
+#ifdef _WIN32
+    #ifdef EMLANG_EXPORTS
+        #define EMLANG_API __declspec(dllexport)
+    #elif defined(EMLANG_DLL)
+        #define EMLANG_API __declspec(dllimport)
+    #else
+        #define EMLANG_API
+    #endif
+#else
+    #define EMLANG_API
+#endif
+
 #include <string>
 #include <vector>
 #include <memory>
@@ -61,14 +74,15 @@ enum class TokenType {
     LET =                   32,    // let variable declaration
     CONST =                 33,    // const constant declaration
     FUNCTION =              34,    // function declaration
-    IF =                    35,    // if conditional statement
-    ELSE =                  36,    // else conditional statement
-    WHILE =                 37,    // while loop statement
-    FOR =                   38,    // for loop statement
-    RETURN =                39,    // return statement
-    TRUE =                  40,    // true boolean literal
-    FALSE =                 41,    // false boolean literal
-    NULL_TOKEN =            42,    // null literal
+    EXTERN =                35,    // extern function declaration
+    IF =                    36,    // if conditional statement
+    ELSE =                  37,    // else conditional statement
+    WHILE =                 38,    // while loop statement
+    FOR =                   39,    // for loop statement
+    RETURN =                40,    // return statement
+    TRUE =                  41,    // true boolean literal
+    FALSE =                 42,    // false boolean literal
+    NULL_TOKEN =            43,    // null literal
 
     // C-style primitive type keywords (0x40-0x5F)
     INT8 =                  64,    // int8 signed 8-bit integer
@@ -140,7 +154,7 @@ enum class TokenType {
  * the compilation process. Each token maintains its original position
  * in the source code to enable accurate error reporting.
  */
-class Token {
+class EMLANG_API Token {
 public:
     TokenType type;        // The category/type of this token
     std::string value;     // The actual text content from source code
@@ -201,7 +215,7 @@ public:
  * // Results in tokens: LET, IDENTIFIER("x"), ASSIGN, NUMBER("42"), SEMICOLON, EOF_TOKEN
  * @endcode
  */
-class Lexer {
+class EMLANG_API Lexer {
 private:
     std::string source;    // The complete source code string being analyzed
     size_t position;       // Current character position in the source (0-based)

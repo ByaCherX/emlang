@@ -56,32 +56,46 @@
 #include <string>
 #include <map>
 
+// DLL Export/Import Macros for Windows
+#ifdef _WIN32
+    #ifdef EMLANG_EXPORTS
+        #define EMLANG_API __declspec(dllexport)
+    #elif defined(EMLANG_DLL)
+        #define EMLANG_API __declspec(dllimport)
+    #else
+        #define EMLANG_API
+    #endif
+#else
+    #define EMLANG_API
+#endif
+
 namespace emlang {
 
 // Forward declarations for all AST node types
 // This allows for circular references and reduces compilation dependencies
-class ASTNode;           // Base class for all AST nodes
-class Expression;        // Base class for all expressions
-class Statement;         // Base class for all statements
-class ASTVisitor;        // Visitor interface for AST traversal
+class ASTNode;                    // Base class for all AST nodes
+class Expression;                 // Base class for all expressions
+class Statement;                  // Base class for all statements
+class ASTVisitor;                 // Visitor interface for AST traversal
 
 // Expression node types
-class LiteralExpression;        // Literal values (42, "hello", true, 'c')
-class IdentifierExpression;     // Variable and function names
-class BinaryOpExpression;       // Binary operations (+, -, *, /, ==, etc.)
-class UnaryOpExpression;        // Unary operations (-, !, &)
-class FunctionCallExpression;   // Function call expressions
-class DereferenceExpression;    // Pointer dereference (*ptr)
-class AddressOfExpression;      // Address-of operations (&var)
+class LiteralExpression;          // Literal values (42, "hello", true, 'c')
+class IdentifierExpression;       // Variable and function names
+class BinaryOpExpression;         // Binary operations (+, -, *, /, ==, etc.)
+class UnaryOpExpression;          // Unary operations (-, !, &)
+class FunctionCallExpression;     // Function call expressions
+class DereferenceExpression;      // Pointer dereference (*ptr)
+class AddressOfExpression;        // Address-of operations (&var)
 
 // Statement node types
-class VariableDeclaration;      // Variable declarations (let/const)
-class FunctionDeclaration;      // Function declarations
-class BlockStatement;           // Block/compound statements
-class IfStatement;              // Conditional statements
-class WhileStatement;           // While loop statements
-class ReturnStatement;          // Return statements
-class ExpressionStatement;      // Expression used as statement
+class VariableDeclaration;        // Variable declarations (let/const)
+class FunctionDeclaration;        // Function declarations
+class ExternFunctionDeclaration;  // External function declarations
+class BlockStatement;             // Block/compound statements
+class IfStatement;                // Conditional statements
+class WhileStatement;             // While loop statements
+class ReturnStatement;            // Return statements
+class ExpressionStatement;        // Expression used as statement
 
 // Program node type
 class Program;                  // Root node representing entire program
@@ -123,15 +137,15 @@ enum class ASTNodeType {
     
     // ======================== STATEMENT TYPES ========================
     // These nodes represent actions, declarations, and control flow
-    
-    EXPRESSION_STMT,       // Expression used as a statement
-    VARIABLE_DECLARATION,  // Variable declarations (let/const)
-    FUNCTION_DECLARATION,  // Function definitions with parameters and body
-    IF_STATEMENT,          // Conditional statements (if/else)
-    WHILE_STATEMENT,       // While loop statements
-    FOR_STATEMENT,         // For loop statements (future extension)
-    RETURN_STATEMENT,      // Return statements with optional value
-    BLOCK_STATEMENT,       // Block/compound statements ({ ... })
+    EXPRESSION_STMT,             // Expression used as a statement
+    VARIABLE_DECLARATION,        // Variable declarations (let/const)
+    FUNCTION_DECLARATION,        // Function definitions with parameters and body
+    EXTERN_FUNCTION_DECLARATION, // External function declarations (extern)
+    IF_STATEMENT,                // Conditional statements (if/else)
+    WHILE_STATEMENT,             // While loop statements
+    FOR_STATEMENT,               // For loop statements (future extension)
+    RETURN_STATEMENT,            // Return statements with optional value
+    BLOCK_STATEMENT,             // Block/compound statements ({ ... })
     
     // ======================== PROGRAM TYPE ========================
     // Root node type
@@ -159,7 +173,7 @@ enum class ASTNodeType {
  * while preserving type safety and enabling polymorphic operations. The position
  * tracking enables precise error reporting and debugging capabilities.
  */
-class ASTNode {
+class EMLANG_API ASTNode {
 public:
     ASTNodeType type;    // Runtime type identifier for this node
     size_t line;         // Source line number where this construct appears (1-based)
@@ -245,7 +259,7 @@ public:
  * - Optimization opportunities
  * - Runtime behavior determination
  */
-class Expression : public ASTNode {
+class EMLANG_API Expression : public ASTNode {
 public:
     /**
      * @brief Constructs a new Expression node
@@ -281,7 +295,7 @@ public:
  * sequential execution order by jumping to different parts of the program
  * or repeating certain sections.
  */
-class Statement : public ASTNode {
+class EMLANG_API Statement : public ASTNode {
 public:
     /**
      * @brief Constructs a new Statement node
@@ -321,7 +335,7 @@ public:
  * - 'c' → char (character type)
  * - true → bool (boolean type)
  */
-class LiteralExpression : public Expression {
+class EMLANG_API LiteralExpression : public Expression {
 public:    
     /**
      * @enum LiteralType
@@ -400,7 +414,7 @@ public:
  * - Parameter names in function bodies
  * - Any named entity reference
  */
-class IdentifierExpression : public Expression {
+class EMLANG_API IdentifierExpression : public Expression {
 public:
     std::string name;    // The identifier name as it appears in source code
     
@@ -458,7 +472,7 @@ public:
  * The parser handles operator precedence during AST construction, so the
  * binary operation tree reflects the correct evaluation order.
  */
-class BinaryOpExpression : public Expression {
+class EMLANG_API BinaryOpExpression : public Expression {
 public:
     ExpressionPtr left;        // Left operand expression
     std::string operator_;     // Operator symbol (+, -, *, ==, etc.)
@@ -521,7 +535,7 @@ public:
  * - Logical negation always produces bool type
  * - Address-of produces a pointer type to the operand type
  */
-class UnaryOpExpression : public Expression {
+class EMLANG_API UnaryOpExpression : public Expression {
 public:
     std::string operator_;     // Operator symbol (-, !, &)
     ExpressionPtr operand;     // The expression being operated on
@@ -581,7 +595,7 @@ public:
  * The call expression's type is determined by the function's declared return
  * type, allowing it to be used in any context where that type is expected.
  */
-class FunctionCallExpression : public Expression {
+class EMLANG_API FunctionCallExpression : public Expression {
 public:
     std::string functionName;               // Name of the function being called
     std::vector<ExpressionPtr> arguments;   // Argument expressions in call order
@@ -597,6 +611,14 @@ public:
      * the vector of unique_ptr, ensuring proper memory management.
      */
     FunctionCallExpression(const std::string& name, std::vector<ExpressionPtr> args, size_t line = 0, size_t column = 0);
+    
+    // Delete copy operations (unique_ptr is not copyable)
+    FunctionCallExpression(const FunctionCallExpression&) = delete;
+    FunctionCallExpression& operator=(const FunctionCallExpression&) = delete;
+    
+    // Default move operations
+    FunctionCallExpression(FunctionCallExpression&&) = default;
+    FunctionCallExpression& operator=(FunctionCallExpression&&) = default;
     
     /**
      * @brief Returns a string representation of this function call
@@ -642,7 +664,7 @@ public:
  * let value: int32 = *ptr;  // DereferenceExpression
  * ```
  */
-class DereferenceExpression : public Expression {
+class EMLANG_API DereferenceExpression : public Expression {
 public:
     ExpressionPtr operand;     // Expression that should evaluate to a pointer
     
@@ -702,7 +724,7 @@ public:
  * let ptr: int32* = &x;  // AddressOfExpression
  * ```
  */
-class AddressOfExpression : public Expression {
+class EMLANG_API AddressOfExpression : public Expression {
 public:
     ExpressionPtr operand;     // Expression whose address is being taken
     
@@ -762,7 +784,7 @@ public:
  * - Initializer compatibility is maintained
  * - Const variables are never modified after declaration
  */
-class VariableDeclaration : public Statement {
+class EMLANG_API VariableDeclaration : public Statement {
 public:
     std::string name;           // Variable name as declared
     std::string type;           // Explicit type annotation (e.g., "int32", "str", "bool")
@@ -837,7 +859,7 @@ public:
  * Functions are added to the symbol table with their signature information,
  * enabling type checking of function calls and overload resolution.
  */
-class FunctionDeclaration : public Statement {
+class EMLANG_API FunctionDeclaration : public Statement {
 public:
     /**
      * @struct Parameter
@@ -888,6 +910,91 @@ public:
 };
 
 /**
+ * @class ExternFunctionDeclaration
+ * @brief Represents external function declarations for C library integration
+ * 
+ * ExternFunctionDeclaration handles the declaration of external functions that
+ * are implemented in C/C++ libraries and linked at compile time. These declarations
+ * provide type information for the EMLang compiler without requiring function bodies.
+ * 
+ * **External Function Syntax:**
+ * ```
+ * extern function functionName(param1: type1, param2: type2): returnType;
+ * ```
+ * 
+ * **Components:**
+ * - **Name**: Function name that matches the external symbol
+ * - **Parameters**: Typed parameter list for argument validation
+ * - **Return Type**: Return type for expression typing and code generation
+ * - **No Body**: External functions have no implementation in EMLang
+ * 
+ * **Semantic Analysis:**
+ * The semantic analyzer validates:
+ * - Function name uniqueness in the current scope
+ * - Parameter type validity
+ * - Return type validity
+ * - External functions cannot be defined elsewhere in EMLang
+ * 
+ * **Code Generation:**
+ * During LLVM IR generation, external functions are:
+ * - Declared without definition
+ * - Marked with external linkage
+ * - Available for function calls without implementation
+ * - Linked against external libraries at link time
+ * 
+ * **Library Integration:**
+ * External functions enable EMLang to call C standard library functions,
+ * custom C/C++ libraries, and system APIs while maintaining type safety.
+ */
+class EMLANG_API ExternFunctionDeclaration : public Statement {
+public:
+    /**
+     * @struct Parameter
+     * @brief Represents a function parameter with name and type
+     * 
+     * Reuses the same parameter structure as regular function declarations
+     * for consistency and type safety.
+     */
+    struct Parameter {
+        std::string name;    // Parameter name for documentation and error reporting
+        std::string type;    // Parameter type for argument validation
+    };
+    
+    std::string name;                      // External function name
+    std::vector<Parameter> parameters;     // Function parameters in declaration order
+    std::string returnType;                // Return type annotation
+    
+    /**
+     * @brief Constructs a new ExternFunctionDeclaration
+     * @param name External function name
+     * @param params Vector of parameters with names and types
+     * @param retType Return type annotation string
+     * @param line Source line number
+     * @param column Source column number
+     * 
+     * External function declarations do not have bodies since they are
+     * implemented in external libraries.
+     */
+    ExternFunctionDeclaration(const std::string& name, std::vector<Parameter> params, const std::string& retType, size_t line = 0, size_t column = 0);
+    
+    /**
+     * @brief Returns a string representation of this external function declaration
+     * @return Formatted string showing the external function signature
+     * 
+     * Example output: "ExternFunctionDeclaration(extern function printf(format: str, ...): int32)"
+     */
+    std::string toString() const override;
+    
+    /**
+     * @brief Accepts a visitor for processing this external function declaration
+     * @param visitor The visitor to accept
+     * 
+     * Calls visitor.visit(*this) to enable type-safe visitor dispatch.
+     */
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
  * @class BlockStatement
  * @brief Represents compound statements containing multiple statements
  * 
@@ -922,7 +1029,7 @@ public:
  * }
  * ```
  */
-class BlockStatement : public Statement {
+class EMLANG_API BlockStatement : public Statement {
 public:
     std::vector<StatementPtr> statements;    // Statements contained in this block
     
@@ -936,6 +1043,14 @@ public:
      * the vector of unique_ptr, ensuring proper memory management.
      */
     BlockStatement(std::vector<StatementPtr> stmts, size_t line = 0, size_t column = 0);
+    
+    // Delete copy operations (unique_ptr is not copyable)
+    BlockStatement(const BlockStatement&) = delete;
+    BlockStatement& operator=(const BlockStatement&) = delete;
+    
+    // Default move operations
+    BlockStatement(BlockStatement&&) = default;
+    BlockStatement& operator=(BlockStatement&&) = default;
     
     /**
      * @brief Returns a string representation of this block statement
@@ -993,7 +1108,7 @@ public:
  * The if statement alters normal sequential execution by potentially
  * skipping the then-branch or else-branch based on the condition value.
  */
-class IfStatement : public Statement {
+class EMLANG_API IfStatement : public Statement {
 public:
     ExpressionPtr condition;     // Boolean expression determining which branch to execute
     StatementPtr thenBranch;     // Statement executed when condition is true
@@ -1068,7 +1183,7 @@ public:
  * }
  * ```
  */
-class WhileStatement : public Statement {
+class EMLANG_API WhileStatement : public Statement {
 public:
     ExpressionPtr condition;     // Boolean expression controlling loop execution
     StatementPtr body;          // Statement executed repeatedly while condition is true
@@ -1139,7 +1254,7 @@ public:
  * return x + y;        // Return with expression value
  * ```
  */
-class ReturnStatement : public Statement {
+class EMLANG_API ReturnStatement : public Statement {
 public:
     ExpressionPtr value;    // Return value expression (nullptr for void returns)
     
@@ -1208,7 +1323,7 @@ public:
  * myFunction();               // Function call with ignored return value
  * ```
  */
-class ExpressionStatement : public Statement {
+class EMLANG_API ExpressionStatement : public Statement {
 public:
     ExpressionPtr expression;    // Expression being executed as a statement
     
@@ -1285,7 +1400,7 @@ public:
  * }
  * ```
  */
-class Program : public ASTNode {
+class EMLANG_API Program : public ASTNode {
 public:
     std::vector<StatementPtr> statements;    // Top-level statements in the program
     
@@ -1300,6 +1415,14 @@ public:
      * Note: No line/column parameters as Program represents the entire file.
      */
     Program(std::vector<StatementPtr> stmts);
+    
+    // Delete copy operations (unique_ptr is not copyable)
+    Program(const Program&) = delete;
+    Program& operator=(const Program&) = delete;
+    
+    // Default move operations
+    Program(Program&&) = default;
+    Program& operator=(Program&&) = default;
     
     /**
      * @brief Returns a string representation of this program
@@ -1379,7 +1502,7 @@ public:
  * };
  * ```
  */
-class ASTVisitor {
+class EMLANG_API ASTVisitor {
 public:
     /**
      * @brief Virtual destructor for proper polymorphic cleanup
@@ -1475,6 +1598,16 @@ public:
      * parameter validation, and body analysis.
      */
     virtual void visit(FunctionDeclaration& node) = 0;
+    
+    /**
+     * @brief Visits an external function declaration statement node
+     * @param node The external function declaration to process
+     * 
+     * Typically handles external function signature registration,
+     * parameter validation, and LLVM external function declaration.
+     * No body analysis is performed for external functions.
+     */
+    virtual void visit(ExternFunctionDeclaration& node) = 0;
     
     /**
      * @brief Visits a block statement node

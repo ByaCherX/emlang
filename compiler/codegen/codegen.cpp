@@ -1,5 +1,14 @@
 // LLVM Code Generator implementation
 #include "../include/codegen.h"
+
+// Disable LLVM warnings
+#ifdef _MSC_VER
+    #pragma warning(push)
+    #pragma warning(disable: 4624) // destructor was implicitly deleted
+    #pragma warning(disable: 4244) // conversion warnings
+    #pragma warning(disable: 4267) // size_t conversion warnings
+#endif
+
 #include <llvm/IR/Verifier.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
@@ -25,6 +34,12 @@
 #include <llvm/Transforms/IPO/SCCP.h>
 #include <llvm/Transforms/IPO/DeadArgumentElimination.h>
 #include <llvm/Transforms/IPO/AlwaysInliner.h>
+
+// Re-enable warnings
+#ifdef _MSC_VER
+    #pragma warning(pop)
+#endif
+
 #include <iostream>
 #include <stdexcept>
 
@@ -342,9 +357,13 @@ void CodeGenerator::visit(IdentifierExpression& node) {
         return;
     }
     
-    // Load the variable (cast to AllocaInst to get the allocated type)
+    // Check if it's a local variable (AllocaInst) or global variable (GlobalVariable)
     if (llvm::AllocaInst* alloca = llvm::dyn_cast<llvm::AllocaInst>(value)) {
+        // Local variable - load from alloca
         currentValue = builder->CreateLoad(alloca->getAllocatedType(), alloca, node.name);
+    } else if (llvm::GlobalVariable* globalVar = llvm::dyn_cast<llvm::GlobalVariable>(value)) {
+        // Global variable - load from global
+        currentValue = builder->CreateLoad(globalVar->getValueType(), globalVar, node.name);
     } else {
         error("Invalid variable type for: " + node.name);
     }
@@ -448,36 +467,77 @@ void CodeGenerator::visit(FunctionCallExpression& node) {
 }
 
 void CodeGenerator::visit(VariableDeclaration& node) {
-    // Generate initial value
-    llvm::Value* initVal = nullptr;
-    if (node.initializer) {
-        node.initializer->accept(*this);
-        initVal = currentValue;
-    } else {
-        // Default initialization
-        llvm::Type* llvmType = getLLVMType(node.type);
-        if (llvmType->isDoubleTy()) {
-            initVal = llvm::ConstantFP::get(*context, llvm::APFloat(0.0));
-        } else if (llvmType->isPointerTy()) {
-            initVal = llvm::ConstantPointerNull::get(llvm::PointerType::get(builder->getInt8Ty(), 0));
+    llvm::Type* llvmType = getLLVMType(node.type);
+    
+    // Check if we're in global scope (no current function)
+    if (!currentFunction) {
+        // Global variable
+        llvm::Constant* initVal = nullptr;
+        if (node.initializer) {
+            node.initializer->accept(*this);
+            // Convert currentValue to constant if it's not already
+            if (auto constVal = llvm::dyn_cast<llvm::Constant>(currentValue)) {
+                initVal = constVal;
+            } else {
+                error("Global variable initializer must be a constant: " + node.name);
+                return;
+            }
         } else {
-            initVal = llvm::Constant::getNullValue(llvmType);
+            // Default initialization for global variables
+            if (llvmType->isDoubleTy()) {
+                initVal = llvm::ConstantFP::get(*context, llvm::APFloat(0.0));
+            } else if (llvmType->isPointerTy()) {
+                initVal = llvm::ConstantPointerNull::get(llvm::PointerType::get(builder->getInt8Ty(), 0));
+            } else {
+                initVal = llvm::Constant::getNullValue(llvmType);
+            }
         }
+        
+        // Create global variable
+        auto globalVar = new llvm::GlobalVariable(
+            *module,
+            llvmType,
+            node.isConstant,  // isConstant
+            llvm::GlobalValue::ExternalLinkage,
+            initVal,
+            node.name
+        );
+        
+        // Remember the global variable
+        namedValues[node.name] = globalVar;
+        currentValue = globalVar;
+    } else {
+        // Local variable
+        llvm::Value* initVal = nullptr;
+        if (node.initializer) {
+            node.initializer->accept(*this);
+            initVal = currentValue;
+        } else {
+            // Default initialization for local variables
+            if (llvmType->isDoubleTy()) {
+                initVal = llvm::ConstantFP::get(*context, llvm::APFloat(0.0));
+            } else if (llvmType->isPointerTy()) {
+                initVal = llvm::ConstantPointerNull::get(llvm::PointerType::get(builder->getInt8Ty(), 0));
+            } else {
+                initVal = llvm::Constant::getNullValue(llvmType);
+            }
+        }
+        
+        if (!initVal) {
+            error("Failed to generate initial value for variable: " + node.name);
+            return;
+        }
+        
+        // Create alloca for the local variable
+        llvm::Value* alloca = createEntryBlockAlloca(currentFunction, node.name, llvmType);
+        
+        // Store initial value
+        builder->CreateStore(initVal, alloca);
+        
+        // Remember the variable
+        namedValues[node.name] = alloca;
+        currentValue = alloca;
     }
-    
-    if (!initVal) {
-        error("Failed to generate initial value for variable: " + node.name);
-        return;
-    }
-      // Create alloca for the variable
-    llvm::Value* alloca = createEntryBlockAlloca(currentFunction, node.name, getLLVMType(node.type));
-    
-    // Store initial value
-    builder->CreateStore(initVal, alloca);
-      // Remember the variable
-    namedValues[node.name] = alloca;
-    
-    currentValue = alloca;
 }
 
 void CodeGenerator::visit(FunctionDeclaration& node) {
@@ -533,6 +593,35 @@ void CodeGenerator::visit(FunctionDeclaration& node) {
     // Restore previous state
     currentFunction = prevFunction;
     namedValues = prevNamedValues;
+      currentValue = function;
+}
+
+void CodeGenerator::visit(ExternFunctionDeclaration& node) {
+    // Create function type
+    std::vector<llvm::Type*> paramTypes;
+    for (const auto& param : node.parameters) {
+        paramTypes.push_back(getLLVMType(param.type));
+    }
+    
+    llvm::Type* returnType = getLLVMType(node.returnType);
+    llvm::FunctionType* funcType = llvm::FunctionType::get(returnType, paramTypes, false);
+    
+    // Create external function declaration (no body)
+    llvm::Function* function = llvm::Function::Create(
+        funcType, 
+        llvm::Function::ExternalLinkage,  // External linkage for library functions
+        node.name,
+        module.get()
+    );
+    
+    // Set parameter names for better IR readability
+    unsigned idx = 0;
+    for (auto& arg : function->args()) {
+        arg.setName(node.parameters[idx++].name);
+    }
+    
+    // Register function in symbol table for later calls
+    functions[node.name] = function;
     
     currentValue = function;
 }
