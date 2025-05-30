@@ -25,6 +25,22 @@ enum class TokenType {
     TRUE,
     FALSE,
     NULL_TOKEN,
+      // C-style primitive type keywords
+    INT8,      // int8 signed 8-bit integer
+    INT16,     // int16 signed 16-bit integer  
+    INT32,     // int32 signed 32-bit integer
+    INT64,     // int64 signed 64-bit integer
+    ISIZE,     // isize pointer-sized signed integer
+    UINT8,     // uint8 unsigned 8-bit integer
+    UINT16,    // uint16 unsigned 16-bit integer
+    UINT32,    // uint32 unsigned 32-bit integer
+    UINT64,    // uint64 unsigned 64-bit integer
+    USIZE,     // usize pointer-sized unsigned integer
+    FLOAT,     // float 32-bit floating point
+    DOUBLE,    // double 64-bit floating point
+    CHAR,      // char Unicode scalar value
+    STR,       // str string slice
+    BOOL,      // bool boolean type
     
     // Operators
     PLUS,

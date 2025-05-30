@@ -46,10 +46,10 @@ private:
     ExpressionPtr parseUnary();
     ExpressionPtr parseCall();
     ExpressionPtr parsePrimary();
-    
-    // Helper metodları
+      // Helper metodları
     std::vector<FunctionDeclaration::Parameter> parseParameterList();
     std::vector<ExpressionPtr> parseArgumentList();
+    std::string parseType();
     
     // Error handling
     void error(const std::string& message);

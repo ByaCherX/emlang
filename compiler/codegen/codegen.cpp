@@ -6,13 +6,32 @@
 #include <llvm/ExecutionEngine/GenericValue.h>
 #include <llvm/ExecutionEngine/MCJIT.h>
 #include <llvm/Support/TargetSelect.h>
+#include <llvm/Support/FileSystem.h>
+#include <llvm/MC/TargetRegistry.h>
+#include <llvm/TargetParser/Host.h>
+#include <llvm/Target/TargetMachine.h>
+#include <llvm/Target/TargetOptions.h>
+#include <llvm/IR/LegacyPassManager.h>
+#include <llvm/Transforms/Scalar.h>
+#include <llvm/Transforms/Utils.h>
+#include <llvm/Transforms/IPO.h>
+#include <llvm/Transforms/InstCombine/InstCombine.h>
+#include <llvm/Transforms/Scalar/Reassociate.h>
+#include <llvm/Transforms/Scalar/GVN.h>
+#include <llvm/Transforms/Scalar/SimplifyCFG.h>
+#include <llvm/Transforms/Utils/Mem2Reg.h>
+#include <llvm/Transforms/Scalar/TailRecursionElimination.h>
+#include <llvm/Transforms/IPO/GlobalOpt.h>
+#include <llvm/Transforms/IPO/SCCP.h>
+#include <llvm/Transforms/IPO/DeadArgumentElimination.h>
+#include <llvm/Transforms/IPO/AlwaysInliner.h>
 #include <iostream>
 #include <stdexcept>
 
 namespace emlang {
 
-CodeGenerator::CodeGenerator(const std::string& moduleName) 
-    : currentFunction(nullptr), currentValue(nullptr) {
+CodeGenerator::CodeGenerator(const std::string& moduleName, OptimizationLevel optLevel) 
+    : currentFunction(nullptr), currentValue(nullptr), optimizationLevel(optLevel) {
     // Initialize LLVM
     context = std::make_unique<llvm::LLVMContext>();
     module = std::make_unique<llvm::Module>(moduleName, *context);
@@ -25,15 +44,63 @@ CodeGenerator::CodeGenerator(const std::string& moduleName)
 }
 
 llvm::Type* CodeGenerator::getLLVMType(const std::string& typeName) {
+    // Legacy types for backward compatibility
     if (typeName == "number" || typeName == "int") {
         return llvm::Type::getInt32Ty(*context);
-    } else if (typeName == "float" || typeName == "double") {
-        return llvm::Type::getDoubleTy(*context);
-    } else if (typeName == "boolean" || typeName == "bool") {
+    } else if (typeName == "boolean") {
         return llvm::Type::getInt1Ty(*context);
     } else if (typeName == "string") {
-        return llvm::Type::getInt8PtrTy(*context);
+        return llvm::PointerType::get(llvm::Type::getInt8Ty(*context), 0);
     } else if (typeName == "void") {
+        return llvm::Type::getVoidTy(*context);
+    }
+    
+    // C-style signed integer types
+    else if (typeName == "int8") {
+        return llvm::Type::getInt8Ty(*context);
+    } else if (typeName == "int16") {
+        return llvm::Type::getInt16Ty(*context);
+    } else if (typeName == "int32") {
+        return llvm::Type::getInt32Ty(*context);
+    } else if (typeName == "int64") {
+        return llvm::Type::getInt64Ty(*context);
+    } else if (typeName == "isize") {
+        // Platform-dependent: 32-bit on 32-bit systems, 64-bit on 64-bit systems
+        return sizeof(void*) == 8 ? llvm::Type::getInt64Ty(*context) : llvm::Type::getInt32Ty(*context);
+    }
+    
+    // C-style unsigned integer types
+    else if (typeName == "uint8") {
+        return llvm::Type::getInt8Ty(*context);
+    } else if (typeName == "uint16") {
+        return llvm::Type::getInt16Ty(*context);
+    } else if (typeName == "uint32") {
+        return llvm::Type::getInt32Ty(*context);
+    } else if (typeName == "uint64") {
+        return llvm::Type::getInt64Ty(*context);
+    } else if (typeName == "usize") {
+        // Platform-dependent: 32-bit on 32-bit systems, 64-bit on 64-bit systems
+        return sizeof(void*) == 8 ? llvm::Type::getInt64Ty(*context) : llvm::Type::getInt32Ty(*context);
+    }
+    
+    // C-style floating point types
+    else if (typeName == "float") {
+        return llvm::Type::getFloatTy(*context);
+    } else if (typeName == "double") {
+        return llvm::Type::getDoubleTy(*context);
+    }
+    
+    // Other types
+    else if (typeName == "char") {
+        return llvm::Type::getInt32Ty(*context); // Unicode scalar value (U+0000 to U+10FFFF)
+    } else if (typeName == "str") {
+        return llvm::PointerType::get(llvm::Type::getInt8Ty(*context), 0);
+    } else if (typeName == "bool") {
+        return llvm::Type::getInt1Ty(*context);
+    }
+    
+    // Rust-like unit type
+    else if (typeName == "()") {
         return llvm::Type::getVoidTy(*context);
     }
     
@@ -46,11 +113,95 @@ llvm::Type* CodeGenerator::getNumberType() {
 }
 
 llvm::Type* CodeGenerator::getStringType() {
-    return llvm::Type::getInt8PtrTy(*context);
+    return llvm::PointerType::get(llvm::Type::getInt8Ty(*context), 0);
 }
 
 llvm::Type* CodeGenerator::getBooleanType() {
     return llvm::Type::getInt1Ty(*context);
+}
+
+// C-style signed integer types
+llvm::Type* CodeGenerator::getInt8Type() {
+    return llvm::Type::getInt8Ty(*context);
+}
+
+llvm::Type* CodeGenerator::getInt16Type() {
+    return llvm::Type::getInt16Ty(*context);
+}
+
+llvm::Type* CodeGenerator::getInt32Type() {
+    return llvm::Type::getInt32Ty(*context);
+}
+
+llvm::Type* CodeGenerator::getInt64Type() {
+    return llvm::Type::getInt64Ty(*context);
+}
+
+llvm::Type* CodeGenerator::getIsizeType() {
+    // Platform-dependent pointer-sized integer
+    return sizeof(void*) == 8 ? llvm::Type::getInt64Ty(*context) : llvm::Type::getInt32Ty(*context);
+}
+
+// C-style unsigned integer types
+llvm::Type* CodeGenerator::getUint8Type() {
+    return llvm::Type::getInt8Ty(*context);
+}
+
+llvm::Type* CodeGenerator::getUint16Type() {
+    return llvm::Type::getInt16Ty(*context);
+}
+
+llvm::Type* CodeGenerator::getUint32Type() {
+    return llvm::Type::getInt32Ty(*context);
+}
+
+llvm::Type* CodeGenerator::getUint64Type() {
+    return llvm::Type::getInt64Ty(*context);
+}
+
+llvm::Type* CodeGenerator::getUsizeType() {
+    // Platform-dependent pointer-sized unsigned integer
+    return sizeof(void*) == 8 ? llvm::Type::getInt64Ty(*context) : llvm::Type::getInt32Ty(*context);
+}
+
+// C-style floating point types
+llvm::Type* CodeGenerator::getFloatType() {
+    return llvm::Type::getFloatTy(*context);
+}
+
+llvm::Type* CodeGenerator::getDoubleType() {
+    return llvm::Type::getDoubleTy(*context);
+}
+
+// Character type
+llvm::Type* CodeGenerator::getCharType() {
+    return llvm::Type::getInt32Ty(*context); // Unicode scalar value
+}
+
+// Unit type
+llvm::Type* CodeGenerator::getUnitType() {
+    return llvm::Type::getVoidTy(*context);
+}
+
+// Helper methods for type checking
+bool CodeGenerator::isSignedInteger(const std::string& typeName) {
+    return typeName == "int8" || typeName == "int16" || typeName == "int32" || 
+           typeName == "int64" || typeName == "isize" || typeName == "int" || typeName == "number";
+}
+
+bool CodeGenerator::isUnsignedInteger(const std::string& typeName) {
+    return typeName == "uint8" || typeName == "uint16" || typeName == "uint32" || 
+           typeName == "uint64" || typeName == "usize";
+}
+
+bool CodeGenerator::isFloatingPoint(const std::string& typeName) {
+    return typeName == "float" || typeName == "double";
+}
+
+bool CodeGenerator::isPrimitiveType(const std::string& typeName) {
+    return isSignedInteger(typeName) || isUnsignedInteger(typeName) || 
+           isFloatingPoint(typeName) || typeName == "bool" || typeName == "boolean" ||
+           typeName == "char" || typeName == "()" || typeName == "void" || typeName == "string";
 }
 
 llvm::Value* CodeGenerator::createEntryBlockAlloca(llvm::Function* function, const std::string& varName, llvm::Type* type) {
@@ -124,9 +275,8 @@ void CodeGenerator::visit(LiteralExpression& node) {
             break;
         case LiteralExpression::LiteralType::BOOLEAN:
             currentValue = llvm::ConstantInt::get(*context, llvm::APInt(1, node.value == "true" ? 1 : 0));
-            break;
-        case LiteralExpression::LiteralType::NULL_LITERAL:
-            currentValue = llvm::Constant::getNullValue(llvm::Type::getInt8PtrTy(*context));
+            break;        case LiteralExpression::LiteralType::NULL_LITERAL:
+            currentValue = llvm::Constant::getNullValue(llvm::PointerType::get(llvm::Type::getInt8Ty(*context), 0));
             break;
     }
 }
@@ -224,8 +374,7 @@ void CodeGenerator::visit(FunctionCallExpression& node) {
         error("Incorrect number of arguments passed");
         return;
     }
-    
-    // Generate arguments
+      // Generate arguments
     std::vector<llvm::Value*> argsV;
     for (auto& arg : node.arguments) {
         arg->accept(*this);
@@ -236,7 +385,12 @@ void CodeGenerator::visit(FunctionCallExpression& node) {
         argsV.push_back(currentValue);
     }
     
-    currentValue = builder->CreateCall(calleeF, argsV, "calltmp");
+    // Create call instruction, only name it if it returns a value
+    if (calleeF->getReturnType()->isVoidTy()) {
+        currentValue = builder->CreateCall(calleeF, (llvm::ArrayRef<llvm::Value*>)argsV);
+    } else {
+        currentValue = builder->CreateCall(calleeF, (llvm::ArrayRef<llvm::Value*>)argsV, "calltmp");
+    }
 }
 
 void CodeGenerator::visit(VariableDeclaration& node) {
@@ -376,10 +530,9 @@ void CodeGenerator::visit(IfStatement& node) {
         builder->CreateBr(mergeBB);
     }
     thenBB = builder->GetInsertBlock(); // Update in case of nested blocks
-    
-    // Generate else block if present
+      // Generate else block if present
     if (elseBB) {
-        function->getBasicBlockList().push_back(elseBB);
+        function->insert(function->end(), elseBB);
         builder->SetInsertPoint(elseBB);
         node.elseBranch->accept(*this);
         if (!builder->GetInsertBlock()->getTerminator()) {
@@ -389,7 +542,7 @@ void CodeGenerator::visit(IfStatement& node) {
     }
     
     // Generate merge block
-    function->getBasicBlockList().push_back(mergeBB);
+    function->insert(function->end(), mergeBB);
     builder->SetInsertPoint(mergeBB);
 }
 
@@ -509,6 +662,55 @@ void CodeGenerator::runOptimizationPasses() {
     
     // Run module passes
     modulePassManager->run(*module);
+}
+
+void CodeGenerator::writeObjectFile(const std::string& filename) const {
+    // Initialize only the native target for object file generation
+    llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmPrinter();
+    llvm::InitializeNativeTargetAsmParser();
+    
+    auto targetTriple = llvm::sys::getDefaultTargetTriple();
+    module->setTargetTriple(targetTriple);
+    
+    std::string error;
+    auto target = llvm::TargetRegistry::lookupTarget(targetTriple, error);
+    
+    if (!target) {
+        throw std::runtime_error("Failed to lookup target: " + error);
+    }
+    
+    auto cpu = "generic";
+    auto features = "";
+    llvm::TargetOptions opt;
+    std::optional<llvm::Reloc::Model> relocModel;
+    auto targetMachine = target->createTargetMachine(targetTriple, cpu, features, opt, relocModel);
+    
+    module->setDataLayout(targetMachine->createDataLayout());
+    
+    std::error_code errorCode;
+    llvm::raw_fd_ostream dest(filename, errorCode, llvm::sys::fs::OF_None);
+    
+    if (errorCode) {
+        throw std::runtime_error("Could not open file " + filename + " for writing: " + errorCode.message());
+    }
+    llvm::legacy::PassManager pass;
+    auto fileType = llvm::CodeGenFileType::ObjectFile;
+    
+    if (targetMachine->addPassesToEmitFile(pass, dest, nullptr, fileType)) {
+        throw std::runtime_error("TargetMachine can't emit a file of this type");
+    }
+    
+    pass.run(*module);
+    dest.flush();
+}
+
+void CodeGenerator::setOptimizationLevel(OptimizationLevel level) {
+    optimizationLevel = level;
+}
+
+OptimizationLevel CodeGenerator::getOptimizationLevel() const {
+    return optimizationLevel;
 }
 
 } // namespace emlang

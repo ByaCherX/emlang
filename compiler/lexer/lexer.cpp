@@ -30,6 +30,23 @@ std::string Token::tokenTypeToString(TokenType type) {
         {TokenType::TRUE, "TRUE"},
         {TokenType::FALSE, "FALSE"},
         {TokenType::NULL_TOKEN, "NULL"},
+          // C-style primitive type tokens
+        {TokenType::INT8, "INT8"},
+        {TokenType::INT16, "INT16"},
+        {TokenType::INT32, "INT32"},
+        {TokenType::INT64, "INT64"},
+        {TokenType::ISIZE, "ISIZE"},
+        {TokenType::UINT8, "UINT8"},
+        {TokenType::UINT16, "UINT16"},
+        {TokenType::UINT32, "UINT32"},
+        {TokenType::UINT64, "UINT64"},
+        {TokenType::USIZE, "USIZE"},
+        {TokenType::FLOAT, "FLOAT"},
+        {TokenType::DOUBLE, "DOUBLE"},
+        {TokenType::CHAR, "CHAR"},
+        {TokenType::STR, "STR"},
+        {TokenType::BOOL, "BOOL"},
+        
         {TokenType::PLUS, "PLUS"},
         {TokenType::MINUS, "MINUS"},
         {TokenType::MULTIPLY, "MULTIPLY"},
@@ -52,8 +69,6 @@ std::string Token::tokenTypeToString(TokenType type) {
         {TokenType::LEFT_PAREN, "LEFT_PAREN"},
         {TokenType::RIGHT_PAREN, "RIGHT_PAREN"},
         {TokenType::LEFT_BRACE, "LEFT_BRACE"},
-        {TokenType::RIGHT_BRACE, "RIGHT_BRACE"},
-        {TokenType::LEFT_BRACKET, "LEFT_BRACKET"},
         {TokenType::RIGHT_BRACKET, "RIGHT_BRACKET"},
         {TokenType::NEWLINE, "NEWLINE"},
         {TokenType::EOF_TOKEN, "EOF"},
@@ -180,7 +195,23 @@ TokenType Lexer::getKeywordType(const std::string& identifier) {
         {"return", TokenType::RETURN},
         {"true", TokenType::TRUE},
         {"false", TokenType::FALSE},
-        {"null", TokenType::NULL_TOKEN}
+        {"null", TokenType::NULL_TOKEN},
+          // C-style primitive type keywords
+        {"int8", TokenType::INT8},
+        {"int16", TokenType::INT16},
+        {"int32", TokenType::INT32},
+        {"int64", TokenType::INT64},
+        {"isize", TokenType::ISIZE},
+        {"uint8", TokenType::UINT8},
+        {"uint16", TokenType::UINT16},
+        {"uint32", TokenType::UINT32},
+        {"uint64", TokenType::UINT64},
+        {"usize", TokenType::USIZE},
+        {"float", TokenType::FLOAT},
+        {"double", TokenType::DOUBLE},
+        {"char", TokenType::CHAR},
+        {"str", TokenType::STR},
+        {"bool", TokenType::BOOL}
     };
     
     auto it = keywords.find(identifier);

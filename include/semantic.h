@@ -54,6 +54,16 @@ private:
     bool isBooleanType(const std::string& type);
     bool isStringType(const std::string& type);
     
+    // Type checking helpers
+    bool isSignedInteger(const std::string& type);
+    bool isUnsignedInteger(const std::string& type);
+    bool isFloatingPoint(const std::string& type);
+    bool isCharType(const std::string& type);
+    bool isUnitType(const std::string& type);
+    bool isPrimitiveType(const std::string& type);
+    bool canImplicitlyConvert(const std::string& from, const std::string& to);
+    std::string getCommonType(const std::string& type1, const std::string& type2);
+    
     // Scope management
     void enterScope();
     void exitScope();

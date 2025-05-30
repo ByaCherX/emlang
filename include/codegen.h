@@ -43,6 +43,30 @@ private:
     llvm::Type* getNumberType();
     llvm::Type* getStringType();
     llvm::Type* getBooleanType();
+      // C-style primitive integer types
+    llvm::Type* getInt8Type();
+    llvm::Type* getInt16Type();
+    llvm::Type* getInt32Type();
+    llvm::Type* getInt64Type();
+    llvm::Type* getIsizeType();
+    llvm::Type* getUint8Type();
+    llvm::Type* getUint16Type();
+    llvm::Type* getUint32Type();
+    llvm::Type* getUint64Type();
+    llvm::Type* getUsizeType();
+    
+    // C-style primitive float types
+    llvm::Type* getFloatType();
+    llvm::Type* getDoubleType();
+      // Other primitive types
+    llvm::Type* getCharType();
+    llvm::Type* getUnitType();
+    
+    // Helper methods for type checking
+    bool isSignedInteger(const std::string& typeName);
+    bool isUnsignedInteger(const std::string& typeName);
+    bool isFloatingPoint(const std::string& typeName);
+    bool isPrimitiveType(const std::string& typeName);
     
     // Helper methods
     llvm::Value* createEntryBlockAlloca(llvm::Function* function, const std::string& varName, llvm::Type* type);
@@ -62,9 +86,11 @@ public:
     
     // Print generated IR
     void printIR() const;
-    
-    // Write IR to file
+      // Write IR to file
     void writeIRToFile(const std::string& filename) const;
+    
+    // Write object file
+    void writeObjectFile(const std::string& filename) const;
     
     // JIT compile and execute
     int executeMain();

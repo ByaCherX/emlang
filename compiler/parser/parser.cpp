@@ -144,11 +144,9 @@ StatementPtr Parser::parseVariableDeclaration() {
     }
     
     Token name = consume(TokenType::IDENTIFIER, "Expected variable name");
-    
-    std::string type;
+      std::string type;
     if (match(TokenType::COLON)) {
-        Token typeToken = consume(TokenType::IDENTIFIER, "Expected type name");
-        type = typeToken.value;
+        type = parseType();
     }
     
     ExpressionPtr initializer = nullptr;
@@ -168,11 +166,9 @@ StatementPtr Parser::parseFunctionDeclaration() {
     consume(TokenType::LEFT_PAREN, "Expected '(' after function name");
     auto parameters = parseParameterList();
     consume(TokenType::RIGHT_PAREN, "Expected ')' after parameters");
-    
-    std::string returnType;
+      std::string returnType;
     if (match(TokenType::COLON)) {
-        Token retType = consume(TokenType::IDENTIFIER, "Expected return type");
-        returnType = retType.value;
+        returnType = parseType();
     }
     
     auto body = parseBlockStatement();
@@ -402,16 +398,72 @@ ExpressionPtr Parser::parsePrimary() {
     throw ParseError("Expected expression", currentToken());
 }
 
+std::string Parser::parseType() {
+    // Check for primitive types
+    if (check(TokenType::INT8)) {
+        advance();
+        return "int8";
+    } else if (check(TokenType::INT16)) {
+        advance();
+        return "int16";
+    } else if (check(TokenType::INT32)) {
+        advance();
+        return "int32";
+    } else if (check(TokenType::INT64)) {
+        advance();
+        return "int64";
+    } else if (check(TokenType::ISIZE)) {
+        advance();
+        return "isize";
+    } else if (check(TokenType::UINT8)) {
+        advance();
+        return "uint8";
+    } else if (check(TokenType::UINT16)) {
+        advance();
+        return "uint16";
+    } else if (check(TokenType::UINT32)) {
+        advance();
+        return "uint32";
+    } else if (check(TokenType::UINT64)) {
+        advance();
+        return "uint64";
+    } else if (check(TokenType::USIZE)) {
+        advance();
+        return "usize";
+    } else if (check(TokenType::FLOAT)) {
+        advance();
+        return "float";
+    } else if (check(TokenType::DOUBLE)) {
+        advance();
+        return "double";
+    } else if (check(TokenType::CHAR)) {
+        advance();
+        return "char";
+    } else if (check(TokenType::STR)) {
+        advance();
+        return "str";
+    } else if (check(TokenType::BOOL)) {
+        advance();
+        return "bool";
+    } else if (check(TokenType::IDENTIFIER)) {
+        // Custom types (structs, classes, etc.)
+        Token typeToken = advance();
+        return typeToken.value;
+    } else {
+        error("Expected type name");
+        throw ParseError("Expected type name", currentToken());
+    }
+}
+
 std::vector<FunctionDeclaration::Parameter> Parser::parseParameterList() {
     std::vector<FunctionDeclaration::Parameter> parameters;
     
-    if (!check(TokenType::RIGHT_PAREN)) {
-        do {
+    if (!check(TokenType::RIGHT_PAREN)) {        do {
             Token name = consume(TokenType::IDENTIFIER, "Expected parameter name");
             consume(TokenType::COLON, "Expected ':' after parameter name");
-            Token type = consume(TokenType::IDENTIFIER, "Expected parameter type");
+            std::string type = parseType();
             
-            parameters.push_back({name.value, type.value});
+            parameters.push_back({name.value, type});
         } while (match(TokenType::COMMA));
     }
     
