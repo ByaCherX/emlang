@@ -10,3 +10,11 @@
 /unicode-downloads
 /target
 /library/target
+
+## Tests
+/tests/*.o
+/tests/*.so
+/tests/*.dylib
+/tests/*.dll
+/tests/*.exe
+/tests/*.pdb
