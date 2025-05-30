@@ -14,20 +14,13 @@ if(LLVM_FOUND)
     include_directories(${LLVM_INCLUDE_DIRS})
     separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
     add_definitions(${LLVM_DEFINITIONS_LIST})
-      # LLVM linkage
+    
     llvm_map_components_to_libnames(llvm_libs 
-        support core irreader
-        x86codegen
-        x86asmparser
-        x86desc
-        x86disassembler
-        x86info
-        mcjit
-        native
-        executionengine
-        interpreter
-        runtimedyld
-        object
+        support core analysis target
+        native nativecodegen
+        mcjit executionengine
+        transformutils scalaropts instcombine ipo
+        mc asmprinter
     )
     set(LLVM_LIBRARIES ${llvm_libs})
 else()
