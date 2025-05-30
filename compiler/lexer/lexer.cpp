@@ -62,6 +62,7 @@ std::string Token::tokenTypeToString(TokenType type) {    static const std::map<
         {TokenType::LOGICAL_AND, "LOGICAL_AND"},
         {TokenType::LOGICAL_OR, "LOGICAL_OR"},
         {TokenType::LOGICAL_NOT, "LOGICAL_NOT"},
+        {TokenType::AMPERSAND, "AMPERSAND"},
         {TokenType::SEMICOLON, "SEMICOLON"},
         {TokenType::COMMA, "COMMA"},
         {TokenType::DOT, "DOT"},
@@ -162,7 +163,7 @@ std::string Lexer::readString() {
         advance();
     }
     
-    if (currentChar == quote) {
+    if (currentChar == '"') {
         advance(); // skip closing quote
     } else {
         error("Unterminated string literal");
@@ -307,8 +308,8 @@ Token Lexer::nextToken() {
             case '%': advance(); return Token(TokenType::MODULO, "%", tokenLine, tokenColumn);
             case '=': advance(); return Token(TokenType::ASSIGN, "=", tokenLine, tokenColumn);
             case '<': advance(); return Token(TokenType::LESS_THAN, "<", tokenLine, tokenColumn);
-            case '>': advance(); return Token(TokenType::GREATER_THAN, ">", tokenLine, tokenColumn);
-            case '!': advance(); return Token(TokenType::LOGICAL_NOT, "!", tokenLine, tokenColumn);
+            case '>': advance(); return Token(TokenType::GREATER_THAN, ">", tokenLine, tokenColumn);            case '!': advance(); return Token(TokenType::LOGICAL_NOT, "!", tokenLine, tokenColumn);
+            case '&': advance(); return Token(TokenType::AMPERSAND, "&", tokenLine, tokenColumn);
             case ';': advance(); return Token(TokenType::SEMICOLON, ";", tokenLine, tokenColumn);
             case ',': advance(); return Token(TokenType::COMMA, ",", tokenLine, tokenColumn);
             case '.': advance(); return Token(TokenType::DOT, ".", tokenLine, tokenColumn);

@@ -330,6 +330,20 @@ ExpressionPtr Parser::parseUnary() {
         return std::make_unique<UnaryOpExpression>(op.value, std::move(right), op.line, op.column);
     }
     
+    // Pointer dereference (*ptr)
+    if (match(TokenType::MULTIPLY)) {
+        Token op = tokens[current - 1];
+        auto right = parseUnary();
+        return std::make_unique<DereferenceExpression>(std::move(right), op.line, op.column);
+    }
+    
+    // Address-of operator (&var)
+    if (match(TokenType::AMPERSAND)) {
+        Token op = tokens[current - 1];
+        auto right = parseUnary();
+        return std::make_unique<AddressOfExpression>(std::move(right), op.line, op.column);
+    }
+    
     return parseCall();
 }
 
@@ -404,60 +418,70 @@ ExpressionPtr Parser::parsePrimary() {
 }
 
 std::string Parser::parseType() {
+    std::string baseType;
+    
     // Check for primitive types
     if (check(TokenType::INT8)) {
         advance();
-        return "int8";
+        baseType = "int8";
     } else if (check(TokenType::INT16)) {
         advance();
-        return "int16";
+        baseType = "int16";
     } else if (check(TokenType::INT32)) {
         advance();
-        return "int32";
+        baseType = "int32";
     } else if (check(TokenType::INT64)) {
         advance();
-        return "int64";
+        baseType = "int64";
     } else if (check(TokenType::ISIZE)) {
         advance();
-        return "isize";
+        baseType = "isize";
     } else if (check(TokenType::UINT8)) {
         advance();
-        return "uint8";
+        baseType = "uint8";
     } else if (check(TokenType::UINT16)) {
         advance();
-        return "uint16";
+        baseType = "uint16";
     } else if (check(TokenType::UINT32)) {
         advance();
-        return "uint32";
+        baseType = "uint32";
     } else if (check(TokenType::UINT64)) {
         advance();
-        return "uint64";
+        baseType = "uint64";
     } else if (check(TokenType::USIZE)) {
         advance();
-        return "usize";
+        baseType = "usize";
     } else if (check(TokenType::FLOAT)) {
         advance();
-        return "float";
+        baseType = "float";
     } else if (check(TokenType::DOUBLE)) {
         advance();
-        return "double";
+        baseType = "double";
     } else if (check(TokenType::CHAR)) {
         advance();
-        return "char";
+        baseType = "char";
     } else if (check(TokenType::STR)) {
         advance();
-        return "str";
+        baseType = "str";
     } else if (check(TokenType::BOOL)) {
         advance();
-        return "bool";
+        baseType = "bool";
     } else if (check(TokenType::IDENTIFIER)) {
         // Custom types (structs, classes, etc.)
         Token typeToken = advance();
-        return typeToken.value;
+        baseType = typeToken.value;
     } else {
         error("Expected type name");
         throw ParseError("Expected type name", currentToken());
     }
+    
+    // Check for pointer modifiers (C-style: int32*, char**, etc.)
+    while (check(TokenType::MULTIPLY)) {
+        advance();
+        baseType += "*";
+    }
+    
+    return baseType;
 }
 
 std::vector<FunctionDeclaration::Parameter> Parser::parseParameterList() {
@@ -515,6 +539,12 @@ void Parser::synchronize() {
         
         advance();
     }
+}
+
+std::string Parser::parsePointerType() {
+    // This method is for future advanced pointer parsing
+    // For now, we use parseType() which already handles pointers
+    return parseType();
 }
 
 } // namespace emlang

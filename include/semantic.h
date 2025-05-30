@@ -46,12 +46,15 @@ private:
     Scope* currentScope;
     std::string currentFunctionReturnType;
     bool hasErrors;
-    
+
     // Type checking
     std::string getExpressionType(Expression& expr);
     bool isCompatibleType(const std::string& expected, const std::string& actual);
     bool isNumericType(const std::string& type);
     bool isBooleanType(const std::string& type);
+    bool isPointerType(const std::string& type);
+    std::string getPointerBaseType(const std::string& pointerType);
+    std::string makePointerType(const std::string& baseType);
     bool isStringType(const std::string& type);
     
     // Type checking helpers
@@ -86,6 +89,8 @@ public:
     void visit(BinaryOpExpression& node) override;
     void visit(UnaryOpExpression& node) override;
     void visit(FunctionCallExpression& node) override;
+    void visit(DereferenceExpression& node) override;
+    void visit(AddressOfExpression& node) override;
     void visit(VariableDeclaration& node) override;
     void visit(FunctionDeclaration& node) override;
     void visit(BlockStatement& node) override;

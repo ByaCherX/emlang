@@ -11,6 +11,22 @@ namespace emlang {
 class ASTNode;
 class Expression;
 class Statement;
+class ASTVisitor;
+class LiteralExpression;
+class IdentifierExpression;
+class BinaryOpExpression;
+class UnaryOpExpression;
+class FunctionCallExpression;
+class DereferenceExpression;
+class AddressOfExpression;
+class VariableDeclaration;
+class FunctionDeclaration;
+class BlockStatement;
+class IfStatement;
+class WhileStatement;
+class ReturnStatement;
+class ExpressionStatement;
+class Program;
 
 using ASTNodePtr = std::unique_ptr<ASTNode>;
 using ExpressionPtr = std::unique_ptr<Expression>;
@@ -25,6 +41,8 @@ enum class ASTNodeType {
     UNARY_OP,
     FUNCTION_CALL,
     ARRAY_ACCESS,
+    DEREFERENCE,   // *ptr
+    ADDRESS_OF,    // &var
     
     // Statements
     EXPRESSION_STMT,
@@ -129,6 +147,28 @@ public:
     std::vector<ExpressionPtr> arguments;
     
     FunctionCallExpression(const std::string& name, std::vector<ExpressionPtr> args, size_t line = 0, size_t column = 0);
+    
+    std::string toString() const override;
+    void accept(ASTVisitor& visitor) override;
+};
+
+// Dereference Expression (*ptr)
+class DereferenceExpression : public Expression {
+public:
+    ExpressionPtr operand;
+    
+    DereferenceExpression(ExpressionPtr operand, size_t line = 0, size_t column = 0);
+    
+    std::string toString() const override;
+    void accept(ASTVisitor& visitor) override;
+};
+
+// Address-of Expression (&var)
+class AddressOfExpression : public Expression {
+public:
+    ExpressionPtr operand;
+    
+    AddressOfExpression(ExpressionPtr operand, size_t line = 0, size_t column = 0);
     
     std::string toString() const override;
     void accept(ASTVisitor& visitor) override;
@@ -246,6 +286,8 @@ public:
     virtual void visit(BinaryOpExpression& node) = 0;
     virtual void visit(UnaryOpExpression& node) = 0;
     virtual void visit(FunctionCallExpression& node) = 0;
+    virtual void visit(DereferenceExpression& node) = 0;
+    virtual void visit(AddressOfExpression& node) = 0;
     virtual void visit(VariableDeclaration& node) = 0;
     virtual void visit(FunctionDeclaration& node) = 0;
     virtual void visit(BlockStatement& node) = 0;

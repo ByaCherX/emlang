@@ -48,6 +48,22 @@ public:
         indent--;
     }
     
+    void visit(DereferenceExpression& node) override {
+        printIndent();
+        std::cout << "DereferenceExpression: *" << std::endl;
+        indent++;
+        node.operand->accept(*this);
+        indent--;
+    }
+    
+    void visit(AddressOfExpression& node) override {
+        printIndent();
+        std::cout << "AddressOfExpression: &" << std::endl;
+        indent++;
+        node.operand->accept(*this);
+        indent--;
+    }
+    
     void visit(FunctionCallExpression& node) override {
         printIndent();
         std::cout << "FunctionCallExpression: " << node.functionName << std::endl;

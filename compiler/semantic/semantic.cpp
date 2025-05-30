@@ -481,10 +481,49 @@ void SemanticAnalyzer::visit(ExpressionStatement& node) {
     node.expression->accept(*this);
 }
 
+void SemanticAnalyzer::visit(DereferenceExpression& node) {
+    node.operand->accept(*this);
+    std::string operandType = getExpressionType(*node.operand);
+    
+    if (!isPointerType(operandType)) {
+        error("Cannot dereference non-pointer type '" + operandType + "'", node.line, node.column);
+        currentExpressionType = "error";
+        return;
+    }
+    
+    // Dereference gives us the base type
+    currentExpressionType = getPointerBaseType(operandType);
+}
+
+void SemanticAnalyzer::visit(AddressOfExpression& node) {
+    node.operand->accept(*this);
+    std::string operandType = getExpressionType(*node.operand);
+    
+    // Address-of operation creates a pointer to the operand type
+    currentExpressionType = makePointerType(operandType);
+}
+
 void SemanticAnalyzer::visit(Program& node) {
     for (auto& stmt : node.statements) {
         stmt->accept(*this);
     }
+}
+
+bool SemanticAnalyzer::isPointerType(const std::string& type) {
+    return type.length() > 0 && type.back() == '*';
+}
+
+std::string SemanticAnalyzer::getPointerBaseType(const std::string& pointerType) {
+    if (!isPointerType(pointerType)) {
+        return pointerType;
+    }
+    
+    // Remove one level of pointer indirection
+    return pointerType.substr(0, pointerType.length() - 1);
+}
+
+std::string SemanticAnalyzer::makePointerType(const std::string& baseType) {
+    return baseType + "*";
 }
 
 } // namespace emlang

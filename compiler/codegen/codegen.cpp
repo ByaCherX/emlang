@@ -104,6 +104,13 @@ llvm::Type* CodeGenerator::getLLVMType(const std::string& typeName) {
         return llvm::Type::getVoidTy(*context);
     }
     
+    // Check for pointer types (C-style: int32*, char*, etc.)
+    else if (typeName.length() > 1 && typeName.back() == '*') {
+        std::string baseTypeName = typeName.substr(0, typeName.length() - 1);
+        llvm::Type* baseType = getLLVMType(baseTypeName);
+        return llvm::PointerType::get(baseType, 0);
+    }
+    
     error("Unknown type: " + typeName);
     return nullptr;
 }
@@ -118,6 +125,11 @@ llvm::Type* CodeGenerator::getStringType() {
 
 llvm::Type* CodeGenerator::getBooleanType() {
     return llvm::Type::getInt1Ty(*context);
+}
+
+llvm::Type* CodeGenerator::getPointerType(const std::string& baseTypeName) {
+    llvm::Type* baseType = getLLVMType(baseTypeName);
+    return llvm::PointerType::get(baseType, 0);
 }
 
 // C-style signed integer types
@@ -753,6 +765,45 @@ void CodeGenerator::setOptimizationLevel(OptimizationLevel level) {
 
 OptimizationLevel CodeGenerator::getOptimizationLevel() const {
     return optimizationLevel;
+}
+
+void CodeGenerator::visit(DereferenceExpression& node) {
+    // Visit the operand to get the pointer value
+    node.operand->accept(*this);
+    llvm::Value* ptrValue = currentValue;
+    
+    if (!ptrValue) {
+        error("Invalid pointer value for dereference");
+        return;
+    }
+    // Create load instruction to dereference pointer
+    // For LLVM 15+, we need to specify the type explicitly
+    llvm::Type* elementType = nullptr;
+    if (auto ptrType = llvm::dyn_cast<llvm::PointerType>(ptrValue->getType())) {
+        // Modern LLVM - use opaque pointers and infer type from context
+        // For now, assume int32 for basic pointer operations
+        elementType = llvm::Type::getInt32Ty(*context);
+    } else {
+        elementType = llvm::Type::getInt32Ty(*context);
+    }
+    currentValue = builder->CreateLoad(elementType, ptrValue, "deref");
+}
+
+void CodeGenerator::visit(AddressOfExpression& node) {
+    // For address-of operation, we need the address of a variable
+    if (auto identifier = dynamic_cast<IdentifierExpression*>(node.operand.get())) {
+        auto it = namedValues.find(identifier->name);
+        if (it != namedValues.end()) {
+            // namedValues stores alloca instructions (addresses)
+            currentValue = it->second;
+        } else {
+            error("Undefined variable for address-of: " + identifier->name);
+            currentValue = nullptr;
+        }
+    } else {
+        error("Address-of operation only supported for variables");
+        currentValue = nullptr;
+    }
 }
 
 } // namespace emlang

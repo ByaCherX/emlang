@@ -226,4 +226,28 @@ void Program::accept(ASTVisitor& visitor) {
     visitor.visit(*this);
 }
 
+// DereferenceExpression
+DereferenceExpression::DereferenceExpression(ExpressionPtr operand, size_t line, size_t column)
+    : Expression(ASTNodeType::DEREFERENCE, line, column), operand(std::move(operand)) {}
+
+std::string DereferenceExpression::toString() const {
+    return "Dereference(*" + operand->toString() + ")";
+}
+
+void DereferenceExpression::accept(ASTVisitor& visitor) {
+    visitor.visit(*this);
+}
+
+// AddressOfExpression
+AddressOfExpression::AddressOfExpression(ExpressionPtr operand, size_t line, size_t column)
+    : Expression(ASTNodeType::ADDRESS_OF, line, column), operand(std::move(operand)) {}
+
+std::string AddressOfExpression::toString() const {
+    return "AddressOf(&" + operand->toString() + ")";
+}
+
+void AddressOfExpression::accept(ASTVisitor& visitor) {
+    visitor.visit(*this);
+}
+
 } // namespace emlang

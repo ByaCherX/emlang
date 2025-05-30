@@ -38,12 +38,14 @@ private:
     // Optimization level
     OptimizationLevel optimizationLevel;
     
-    // Type mapping
+      // Type mapping
     llvm::Type* getLLVMType(const std::string& typeName);
     llvm::Type* getNumberType();
     llvm::Type* getStringType();
     llvm::Type* getBooleanType();
-      // C-style primitive integer types
+    llvm::Type* getPointerType(const std::string& baseTypeName);
+    
+    // C-style primitive integer types
     llvm::Type* getInt8Type();
     llvm::Type* getInt16Type();
     llvm::Type* getInt32Type();
@@ -109,6 +111,8 @@ public:
     void visit(BinaryOpExpression& node) override;
     void visit(UnaryOpExpression& node) override;
     void visit(FunctionCallExpression& node) override;
+    void visit(DereferenceExpression& node) override;
+    void visit(AddressOfExpression& node) override;
     void visit(VariableDeclaration& node) override;
     void visit(FunctionDeclaration& node) override;
     void visit(BlockStatement& node) override;
