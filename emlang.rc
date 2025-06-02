@@ -1,0 +1,43 @@
+#include <windows.h>
+#include "resource.h"
+#include "include/emlang.h"
+
+// Version information
+1 VERSIONINFO
+FILEVERSION     EMLANG_VERSION_MAJOR,EMLANG_VERSION_MINOR,EMLANG_VERSION_PATCH
+PRODUCTVERSION  EMLANG_VERSION_MAJOR,EMLANG_VERSION_MINOR,EMLANG_VERSION_PATCH
+FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+FILEFLAGS       0x0L
+FILEOS          VOS__WINDOWS32
+FILETYPE        VFT_APP
+FILESUBTYPE     VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"  // US English, Unicode        
+        BEGIN
+            VALUE "CompanyName",       EMLANG_COMPANY_NAME "\0"
+            VALUE "FileDescription",   "EMLang Programming Language Compiler and Interpreter\0"
+            VALUE "FileVersion",       EMLANG_VERSION_STRING "\0"
+            VALUE "InternalName",      "emlang\0"
+            VALUE "LegalCopyright",    EMLANG_COPYRIGHT "\0"
+            VALUE "OriginalFilename",  "emlang.exe\0"
+            VALUE "ProductName",       "EMLang Compiler\0"
+            VALUE "ProductVersion",    "0\0"
+            VALUE "Comments",          EMLANG_COMMENTS "\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200  // US English, Unicode
+    END
+END
+
+// String table
+STRINGTABLE
+BEGIN
+    IDS_APP_NAME         "EMLang Compiler"
+    IDS_VERSION_STRING   "Version " EMLANG_VERSION_STRING
+    IDS_COPYRIGHT        EMLANG_COPYRIGHT
+    IDS_USAGE            "Usage: emlang [options] <input_file>"
+END

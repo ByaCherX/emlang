@@ -46,7 +46,7 @@ add_subdirectory(compiler)
 add_subdirectory(library)
 
 # Ana executable
-add_executable(emlang src/main.cpp)
+add_executable(emlang src/main.cpp emlang.rc)
 
 # Include directories
 target_include_directories(emlang PRIVATE library/include)
