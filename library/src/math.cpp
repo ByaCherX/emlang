@@ -1,6 +1,6 @@
 #include "math.h"
-#include <cstdlib>
-#include <ctime>
+#include <stdlib.h>
+#include <time.h>
 
 // Static flag to track random initialization
 static bool random_initialized = false;
@@ -10,7 +10,7 @@ static bool random_initialized = false;
  */
 static void ensure_random_init() {
     if (!random_initialized) {
-        std::srand(static_cast<unsigned int>(std::time(nullptr)));
+        srand(static_cast<unsigned int>(time(nullptr)));
         random_initialized = true;
     }
 }
@@ -64,7 +64,84 @@ int emlang_random(int min, int max) {
     
     if (min == max) return min;
     
-    return min + (std::rand() % (max - min + 1));
+    return min + (rand() % (max - min + 1));
+}
+
+// ======================== EXTENDED MATH FUNCTIONS ========================
+
+int emlang_min(int a, int b) {
+    return (a < b) ? a : b;
+}
+
+int emlang_max(int a, int b) {
+    return (a > b) ? a : b;
+}
+
+int emlang_gcd(int a, int b) {
+    if (a < 0) a = -a;  // Handle negative numbers
+    if (b < 0) b = -b;
+    
+    while (b != 0) {
+        int temp = b;
+        b = a % b;
+        a = temp;
+    }
+    return a;
+}
+
+int emlang_lcm(int a, int b) {
+    if (a == 0 || b == 0) return 0;
+    
+    int gcd = emlang_gcd(a, b);
+    return (a / gcd) * b;  // Avoid overflow by dividing first
+}
+
+int emlang_factorial(int n) {
+    if (n < 0) return -1;  // Error case for negative numbers
+    if (n == 0 || n == 1) return 1;
+    
+    int result = 1;
+    for (int i = 2; i <= n; ++i) {
+        result *= i;
+    }
+    return result;
+}
+
+int emlang_fibonacci(int n) {
+    if (n < 0) return -1;  // Error case for negative numbers
+    if (n == 0) return 0;
+    if (n == 1) return 1;
+    
+    int a = 0, b = 1, result = 0;
+    for (int i = 2; i <= n; ++i) {
+        result = a + b;
+        a = b;
+        b = result;
+    }
+    return result;
+}
+
+int emlang_is_prime(int n) {
+    if (n <= 1) return 0;  // Not prime
+    if (n == 2) return 1;  // 2 is prime
+    if (n % 2 == 0) return 0;  // Even numbers > 2 are not prime
+    
+    // Check odd divisors up to sqrt(n)
+    for (int i = 3; i * i <= n; i += 2) {
+        if (n % i == 0) return 0;
+    }
+    return 1;
+}
+
+int emlang_mod(int a, int b) {
+    if (b == 0) return 0;  // Avoid division by zero
+    
+    int result = a % b;
+    // Handle negative numbers to always return positive result
+    if (result < 0) {
+        result += (b > 0) ? b : -b;
+    }
+    return result;
 }
 
 } // extern "C"
