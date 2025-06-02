@@ -14,7 +14,8 @@ std::string Token::toString() const {
     return tokenTypeToString(type) + "(" + value + ") at " + std::to_string(line) + ":" + std::to_string(column);
 }
 
-std::string Token::tokenTypeToString(TokenType type) {    static const std::map<TokenType, std::string> tokenNames = {
+std::string Token::tokenTypeToString(TokenType type) {    
+    static const std::map<TokenType, std::string> tokenNames = {
         {TokenType::NUMBER, "NUMBER"},
         {TokenType::STRING, "STRING"},
         {TokenType::CHAR_LITERAL, "CHAR_LITERAL"},
@@ -31,7 +32,8 @@ std::string Token::tokenTypeToString(TokenType type) {    static const std::map<
         {TokenType::TRUE, "TRUE"},
         {TokenType::FALSE, "FALSE"},
         {TokenType::NULL_TOKEN, "NULL"},
-          // C-style primitive type tokens
+
+        // C-style primitive type tokens
         {TokenType::INT8, "INT8"},
         {TokenType::INT16, "INT16"},
         {TokenType::INT32, "INT32"},

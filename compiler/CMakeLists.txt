@@ -36,11 +36,15 @@ if(USE_CLANG)
         -Wno-deprecated-declarations
     )
     
-    # Windows'ta libstdc++ kullanımını zorla
+    # Windows'ta MSVC uyumluluğu
     if(WIN32)
         target_compile_options(emlang_compiler PRIVATE
-            -stdlib=libstdc++
-            -target x86_64-w64-mingw32
+            -fms-compatibility-version=19.29
+            -fms-extensions
+            -fdelayed-template-parsing
+        )
+        target_compile_definitions(emlang_compiler PRIVATE
+            _CRT_SECURE_NO_WARNINGS
         )
     endif()
     
