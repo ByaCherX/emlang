@@ -80,7 +80,7 @@ CompilerOptions parseArguments(int argc, char* argv[]) {
 }
 
 int main(int argc, char* argv[]) {
-    std::cout << "EMLang Compiler v1.0.0" << std::endl;
+    std::cout << "EMLang Compiler" << std::endl;
     std::cout << "========================" << std::endl;
     
     try {
