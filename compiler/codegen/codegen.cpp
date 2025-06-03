@@ -58,6 +58,7 @@ CodeGenerator::CodeGenerator(const std::string& moduleName, OptimizationLevel op
     llvm::InitializeNativeTargetAsmParser();
 }
 
+/* ==================== LLVM Types Match ==================== */
 llvm::Type* CodeGenerator::getLLVMType(const std::string& typeName) {
     // Legacy types for backward compatibility
     if (typeName == "number" || typeName == "int") {
@@ -215,6 +216,31 @@ llvm::Type* CodeGenerator::getUnitType() {
     return llvm::Type::getVoidTy(*context);
 }
 
+// Helper methods for multi-level pointer support
+llvm::Type* CodeGenerator::getElementTypeFromPointer(llvm::Value* pointerValue, const std::string& sourceType) {
+    if (sourceType.empty() || sourceType.back() != '*') {
+        // Not a pointer type
+        return nullptr;
+    }
+    
+    // Remove one level of pointer indirection to get the pointed-to type
+    std::string pointeeType = sourceType.substr(0, sourceType.length() - 1);
+    
+    // Convert the pointee type to LLVM type
+    return getLLVMType(pointeeType);
+}
+
+std::string CodeGenerator::getPointeeType(const std::string& pointerType) {
+    if (pointerType.empty() || pointerType.back() != '*') {
+        return pointerType; // Not a pointer, return as-is
+    }
+    
+    // Remove one '*' from the end
+    return pointerType.substr(0, pointerType.length() - 1);
+}
+
+// END - Helper methods for multi-level pointer support
+
 // Helper methods for type checking
 bool CodeGenerator::isSignedInteger(const std::string& typeName) {
     return typeName == "int8" || typeName == "int16" || typeName == "int32" || 
@@ -235,6 +261,8 @@ bool CodeGenerator::isPrimitiveType(const std::string& typeName) {
            isFloatingPoint(typeName) || typeName == "bool" || typeName == "boolean" ||
            typeName == "char" || typeName == "()" || typeName == "void" || typeName == "string";
 }
+// END - LLVM Types Match
+//==============================================================
 
 llvm::Value* CodeGenerator::createEntryBlockAlloca(llvm::Function* function, const std::string& varName, llvm::Type* type) {
     llvm::IRBuilder<> tempBuilder(&function->getEntryBlock(), function->getEntryBlock().begin());
@@ -357,6 +385,14 @@ void CodeGenerator::visit(IdentifierExpression& node) {
         return;
     }
     
+    // Set the current expression type from namedTypes for proper type tracking
+    auto typeIt = namedTypes.find(node.name);
+    if (typeIt != namedTypes.end()) {
+        currentExpressionType = typeIt->second;
+    } else {
+        currentExpressionType = "unknown";
+    }
+    
     // Check if it's a local variable (AllocaInst) or global variable (GlobalVariable)
     if (llvm::AllocaInst* alloca = llvm::dyn_cast<llvm::AllocaInst>(value)) {
         // Local variable - load from alloca
@@ -469,6 +505,9 @@ void CodeGenerator::visit(FunctionCallExpression& node) {
 void CodeGenerator::visit(VariableDeclaration& node) {
     llvm::Type* llvmType = getLLVMType(node.type);
     
+    // Track the type for multi-level pointer support
+    currentExpressionType = node.type;
+    
     // Check if we're in global scope (no current function)
     if (!currentFunction) {
         // Global variable
@@ -505,6 +544,7 @@ void CodeGenerator::visit(VariableDeclaration& node) {
         
         // Remember the global variable
         namedValues[node.name] = globalVar;
+        namedTypes[node.name] = node.type;
         currentValue = globalVar;
     } else {
         // Local variable
@@ -536,6 +576,7 @@ void CodeGenerator::visit(VariableDeclaration& node) {
         
         // Remember the variable
         namedValues[node.name] = alloca;
+        namedTypes[node.name] = node.type;
         currentValue = alloca;
     }
 }
@@ -567,16 +608,24 @@ void CodeGenerator::visit(FunctionDeclaration& node) {
     // Create basic block
     llvm::BasicBlock* bb = llvm::BasicBlock::Create(*context, "entry", function);
     builder->SetInsertPoint(bb);
-      // Save previous state
+    // Save previous state
     llvm::Function* prevFunction = currentFunction;
     std::map<std::string, llvm::Value*> prevNamedValues = namedValues;
     
     currentFunction = function;
-    namedValues.clear();      // Create allocas for parameters
+    namedValues.clear();
+    
+    // Create allocas for parameters
+    unsigned paramIdx = 0;
     for (auto& arg : function->args()) {
         llvm::Value* alloca = createEntryBlockAlloca(function, std::string(arg.getName()), arg.getType());
         builder->CreateStore(&arg, alloca);
         namedValues[std::string(arg.getName())] = alloca;
+        // Also store the parameter type for multi-level pointer support
+        if (paramIdx < node.parameters.size()) {
+            namedTypes[std::string(arg.getName())] = node.parameters[paramIdx].type;
+        }
+        paramIdx++;
     }
     
     // Generate function body
@@ -860,21 +909,26 @@ void CodeGenerator::visit(DereferenceExpression& node) {
     // Visit the operand to get the pointer value
     node.operand->accept(*this);
     llvm::Value* ptrValue = currentValue;
+    std::string operandType = currentExpressionType;
     
     if (!ptrValue) {
         error("Invalid pointer value for dereference");
         return;
     }
-    // Create load instruction to dereference pointer
-    // For LLVM 15+, we need to specify the type explicitly
-    llvm::Type* elementType = nullptr;
-    if (auto ptrType = llvm::dyn_cast<llvm::PointerType>(ptrValue->getType())) {
-        // Modern LLVM - use opaque pointers and infer type from context
-        // For now, assume int32 for basic pointer operations
+    
+    // Determine the correct element type from the pointer type
+    llvm::Type* elementType = getElementTypeFromPointer(ptrValue, operandType);
+    
+    if (!elementType) {
+        // Fallback to int32 for backward compatibility
         elementType = llvm::Type::getInt32Ty(*context);
+        currentExpressionType = "int32";
     } else {
-        elementType = llvm::Type::getInt32Ty(*context);
+        // Update current expression type to the pointee type
+        currentExpressionType = getPointeeType(operandType);
     }
+    
+    // Create load instruction to dereference pointer
     currentValue = builder->CreateLoad(elementType, ptrValue, "deref");
 }
 
@@ -885,6 +939,14 @@ void CodeGenerator::visit(AddressOfExpression& node) {
         if (it != namedValues.end()) {
             // namedValues stores alloca instructions (addresses)
             currentValue = it->second;
+            
+            // Set the expression type to pointer of the variable type
+            auto typeIt = namedTypes.find(identifier->name);
+            if (typeIt != namedTypes.end()) {
+                currentExpressionType = typeIt->second + "*";
+            } else {
+                currentExpressionType = "unknown*";
+            }
         } else {
             error("Undefined variable for address-of: " + identifier->name);
             currentValue = nullptr;

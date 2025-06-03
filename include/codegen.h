@@ -55,7 +55,7 @@
 
 #pragma once
 
-// DLL Export/Import Macros for Windows
+/* --- DLL Export/Import Macros for Windows --- */
 #ifdef _WIN32
     #ifdef EMLANG_EXPORTS
         #define EMLANG_API __declspec(dllexport)
@@ -67,6 +67,7 @@
 #else
     #define EMLANG_API
 #endif
+/*----------------------------------------------*/
 
 #include "ast.h"
 
@@ -205,6 +206,15 @@ private:
      */
     std::unique_ptr<llvm::IRBuilder<>> builder;
     
+    /**
+     * @brief Current expression type during code generation
+     * 
+     * Tracks the EMLang type of the currently evaluated expression.
+     * This is essential for proper type handling in multi-level pointers
+     * and complex expressions where LLVM type information alone is insufficient.
+     */
+    std::string currentExpressionType;
+    
     // ======================== SYMBOL MANAGEMENT ========================
     
     /**
@@ -218,6 +228,15 @@ private:
      * - Alloca instruction tracking for optimization
      */
     std::map<std::string, llvm::Value*> namedValues;
+    
+    /**
+     * @brief Symbol type table mapping variable names to their EMLang types
+     * 
+     * Tracks the EMLang types of variables alongside their LLVM values.
+     * This is essential for multi-level pointer operations where we need
+     * to know the original type structure to perform correct dereferencing.
+     */
+    std::map<std::string, std::string> namedTypes;
     
     /**
      * @brief Function table mapping function names to LLVM functions
@@ -498,7 +517,68 @@ private:
      * Used for distinguishing between primitive types and complex
      * types like structures, arrays, or user-defined types.
      */
-    bool isPrimitiveType(const std::string& typeName);    
+    bool isPrimitiveType(const std::string& typeName);
+    
+    /**
+     * @brief Extracts the element type from a pointer value using source type information
+     * @param pointerValue LLVM pointer value to extract element type from
+     * @param sourceType Original EMLang source type string (e.g., "int32*", "int32**")
+     * @return LLVM type of the pointed-to element, or nullptr if not a pointer type
+     * 
+     * This helper method is essential for multi-level pointer dereferencing operations.
+     * It uses the original EMLang type information to determine the correct pointed-to
+     * type, which is crucial for proper LLVM IR generation when dealing with complex
+     * pointer hierarchies.
+     * 
+     * **Multi-level Pointer Support:**
+     * - Single pointer: "int32*" → returns i32 type
+     * - Double pointer: "int32**" → returns i32* type  
+     * - Triple pointer: "int32***" → returns i32** type
+     * 
+     * **Usage in Code Generation:**
+     * - Used by DereferenceExpression visitor for proper load instruction generation
+     * - Enables correct type tracking through multiple dereference operations
+     * - Maintains type safety in complex pointer arithmetic
+     * 
+     * **Type Safety:**
+     * - Validates that sourceType is actually a pointer type
+     * - Returns nullptr for non-pointer types to indicate error condition
+     * - Preserves original type semantics during IR generation
+     */
+    llvm::Type* getElementTypeFromPointer(llvm::Value* pointerValue, const std::string& sourceType);
+    
+    /**
+     * @brief Removes one level of pointer indirection from an EMLang type string
+     * @param pointerType EMLang pointer type string (e.g., "int32**", "char*")
+     * @return Type string with one less level of indirection (e.g., "int32*", "char")
+     * 
+     * String manipulation helper for multi-level pointer type processing. This method
+     * is used to track type information through multiple levels of pointer dereferencing
+     * and ensures proper type propagation in complex pointer expressions.
+     * 
+     * **Pointer Level Processing:**
+     * - "int32***" → "int32**" (triple to double pointer)
+     * - "int32**" → "int32*" (double to single pointer)
+     * - "int32*" → "int32" (pointer to base type)
+     * - "int32" → "int32" (non-pointer unchanged)
+     * 
+     * **Multi-level Pointer Operations:**
+     * - Used in conjunction with getElementTypeFromPointer()
+     * - Enables recursive type resolution for nested pointer structures
+     * - Maintains type consistency across dereference chains
+     * 
+     * **Error Handling:**
+     * - Returns input unchanged if not a pointer type
+     * - Safe for use with any type string (no validation errors)
+     * - Gracefully handles edge cases like empty strings
+     * 
+     * **Integration with LLVM:**
+     * - Result can be passed to getLLVMType() for LLVM type conversion
+     * - Supports the full EMLang type system including complex pointer hierarchies
+     * - Essential for proper SSA form generation in multi-level pointer operations
+     */
+    std::string getPointeeType(const std::string& pointerType);
+
     // ======================== CODE GENERATION HELPERS ========================
     
     /**
@@ -944,7 +1024,8 @@ private:
      * process to prevent generation of invalid or corrupted IR.
      */
     void error(const std::string& message) const;
-};
+
+}; // Ast Visitor
 
 } // namespace emlang
 
