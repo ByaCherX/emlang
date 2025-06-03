@@ -34,10 +34,10 @@ BEGIN
 END
 
 // String table
-STRINGTABLE
-BEGIN
-    IDS_APP_NAME         "EMLang Compiler"
-    IDS_VERSION_STRING   "Version " EMLANG_VERSION_STRING
-    IDS_COPYRIGHT        EMLANG_COPYRIGHT
-    IDS_USAGE            "Usage: emlang [options] <input_file>"
-END
+//STRINGTABLE
+//BEGIN
+    //IDS_APP_NAME         "EMLang Compiler"
+    //IDS_VERSION_STRING   "Version " EMLANG_VERSION_STRING
+    //IDS_COPYRIGHT        EMLANG_COPYRIGHT
+    //IDS_USAGE            "Usage: emlang [options] <input_file>"
+//END
