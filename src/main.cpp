@@ -9,6 +9,8 @@
 
 using namespace emlang;
 
+#define DEBUG_MODE 0
+
 std::string readFile(const std::string& filename) {
     std::ifstream file(filename);
     if (!file.is_open()) {
@@ -85,6 +87,14 @@ int main(int argc, char* argv[]) {
     
     try {
         CompilerOptions options = parseArguments(argc, argv);
+#if(DEBUG_MODE)
+        std::cout << "<<< Debugger Enabled >>>" << std::endl;
+        const std::string path = "C:\\Users\\kralk\\Documents\\GitHub\\emlang\\";
+        options.inputFile = path + "tests\\emlang_library_test.em";
+        options.outputFile = path + "emlang_output.o";
+        options.showHelp = false;
+        argc++;
+#endif
         
         if (options.showHelp || argc == 1) {
             printUsage(argv[0]);
