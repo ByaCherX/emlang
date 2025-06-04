@@ -957,4 +957,45 @@ void CodeGenerator::visit(AddressOfExpression& node) {
     }
 }
 
+void CodeGenerator::visit(AssignmentExpression& node) {
+    // First, determine where we're storing the value (target)
+    // This depends on the type of target - it could be a variable name or a dereferenced pointer
+    llvm::Value* targetPtr = nullptr;
+    
+    if (auto* identExpr = dynamic_cast<IdentifierExpression*>(node.target.get())) {
+        // Target is a simple variable
+        targetPtr = namedValues[identExpr->name];
+        if (!targetPtr) {
+            error("Unknown variable name in assignment: " + identExpr->name);
+            return;
+        }
+    } else if (auto* derefExpr = dynamic_cast<DereferenceExpression*>(node.target.get())) {
+        // Target is a dereference expression (*ptr) - we need to get the pointer value
+        derefExpr->operand->accept(*this);
+        targetPtr = currentValue;
+        if (!targetPtr) {
+            error("Invalid pointer dereference in assignment");
+            return;
+        }
+    } else {
+        error("Invalid assignment target type");
+        return;
+    }
+    
+    // Now evaluate the right-hand side to get the value to store
+    node.value->accept(*this);
+    llvm::Value* valueToStore = currentValue;
+    if (!valueToStore) {
+        error("Invalid expression in assignment");
+        return;
+    }
+    
+    // Create a store instruction to assign the value
+    builder->CreateStore(valueToStore, targetPtr);
+    
+    // The value of the assignment expression is the value assigned
+    currentValue = valueToStore;
+}
+
+
 } // namespace emlang
