@@ -128,6 +128,7 @@ add_executable(emlang_check src/emlang_check.cpp)
 # Include directories (conditional)
 if(BUILD_LIBRARY)
     target_include_directories(emlang PRIVATE library/include)
+    target_include_directories(emlang_check PRIVATE library/include)
 endif()
 
 # Compiler DLL linkage for emlang_check
