@@ -1,5 +1,6 @@
 // Semantic Analyzer implementation
 #include "../include/semantic.h"
+#include "../include/builtins.h"
 #include <iostream>
 
 namespace emlang {
@@ -45,6 +46,9 @@ Scope* Scope::getParent() const {
 SemanticAnalyzer::SemanticAnalyzer() : currentScope(nullptr), hasErrors(false) {
     // Create global scope
     enterScope();
+    
+    // Register built-in functions in global scope
+    registerBuiltinFunctions();
 }
 
 bool SemanticAnalyzer::analyze(Program& program) {
@@ -548,6 +552,25 @@ std::string SemanticAnalyzer::getPointerBaseType(const std::string& pointerType)
 
 std::string SemanticAnalyzer::makePointerType(const std::string& baseType) {
     return baseType + "*";
+}
+
+void SemanticAnalyzer::registerBuiltinFunctions() {
+    // Get built-in functions from builtins.cpp
+    auto builtins = getBuiltinFunctions();
+    
+    for (const auto& [name, builtin] : builtins) {
+        // Register each built-in function as a function symbol in global scope
+        // Use a special function type signature format: "returnType(param1Type,param2Type,...)"
+        std::string signature = builtin.returnType + "(";
+        for (size_t i = 0; i < builtin.parameters.size(); ++i) {
+            if (i > 0) signature += ",";
+            signature += builtin.parameters[i].type;
+        }
+        signature += ")";
+        
+        // Register as function symbol in global scope
+        currentScope->define(name, signature, true, true, 0, 0);
+    }
 }
 
 } // namespace emlang

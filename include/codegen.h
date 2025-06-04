@@ -70,6 +70,7 @@
 /*----------------------------------------------*/
 
 #include "ast.h"
+#include "builtins.h"
 
 // Disable LLVM warnings
 #ifdef _MSC_VER
@@ -621,6 +622,19 @@ private:
      * - Instruction combining and simplification
      */
     void runOptimizationPasses();
+    
+    /**
+     * @brief Registers built-in functions as extern declarations
+     * 
+     * Automatically registers all EMLang built-in functions (such as I/O,
+     * memory management, string operations, and math functions) as external
+     * function declarations in the LLVM module. This enables built-in 
+     * functions to be called without explicit extern declarations.
+     * 
+     * The method creates LLVM function declarations for each built-in function
+     * and adds them to the functions symbol table for later resolution.
+     */
+    void registerBuiltinFunctions();
 
 public:
     // ======================== CONSTRUCTION AND LIFECYCLE ========================

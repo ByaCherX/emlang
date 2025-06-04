@@ -56,6 +56,9 @@ CodeGenerator::CodeGenerator(const std::string& moduleName, OptimizationLevel op
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
     llvm::InitializeNativeTargetAsmParser();
+    
+    // Register built-in functions as extern declarations
+    registerBuiltinFunctions();
 }
 
 /* ==================== LLVM Types Match ==================== */
@@ -471,8 +474,26 @@ void CodeGenerator::visit(UnaryOpExpression& node) {
 }
 
 void CodeGenerator::visit(FunctionCallExpression& node) {
-    // Look up function in module
+    // Look up function in module first
     llvm::Function* calleeF = module->getFunction(node.functionName);
+    
+    // If not found, check if it's a built-in function
+    if (!calleeF) {
+        auto funcIt = functions.find(node.functionName);
+        if (funcIt != functions.end()) {
+            calleeF = funcIt->second;
+        }
+    }
+    
+    // If still not found, try to find by link name (for built-ins)
+    if (!calleeF) {
+        auto builtins = getBuiltinFunctions();
+        auto builtinIt = builtins.find(node.functionName);
+        if (builtinIt != builtins.end()) {
+            calleeF = module->getFunction(builtinIt->second.linkName);
+        }
+    }
+    
     if (!calleeF) {
         error("Unknown function referenced: " + node.functionName);
         return;
@@ -480,10 +501,13 @@ void CodeGenerator::visit(FunctionCallExpression& node) {
     
     // Check argument count
     if (calleeF->arg_size() != node.arguments.size()) {
-        error("Incorrect number of arguments passed");
+        error("Incorrect number of arguments passed to " + node.functionName + 
+              ": expected " + std::to_string(calleeF->arg_size()) + 
+              ", got " + std::to_string(node.arguments.size()));
         return;
     }
-      // Generate arguments
+    
+    // Generate arguments
     std::vector<llvm::Value*> argsV;
     for (auto& arg : node.arguments) {
         arg->accept(*this);

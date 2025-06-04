@@ -5,6 +5,7 @@ add_library(emlang_compiler SHARED
     parser/parser.cpp
     semantic/semantic.cpp
     codegen/codegen.cpp
+    builtins.cpp
     emlang_compiler.rc  # Resource File
 )
 
