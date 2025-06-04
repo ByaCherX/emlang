@@ -25,6 +25,7 @@
 // │   ├── IdentifierExpression (variable/function references)
 // │   ├── BinaryOpExpression (arithmetic, logical, comparison)
 // │   ├── UnaryOpExpression (negation, logical NOT, address-of)
+// │   ├── AssignmentExpression (assignment operations)
 // │   ├── FunctionCallExpression (function invocations)
 // │   ├── DereferenceExpression (pointer dereferencing)
 // │   └── AddressOfExpression (address-of operations)
@@ -83,6 +84,7 @@ class LiteralExpression;          // Literal values (42, "hello", true, 'c')
 class IdentifierExpression;       // Variable and function names
 class BinaryOpExpression;         // Binary operations (+, -, *, /, ==, etc.)
 class UnaryOpExpression;          // Unary operations (-, !, &)
+class AssignmentExpression;       // Assignment operations (variable = expression)
 class FunctionCallExpression;     // Function call expressions
 class DereferenceExpression;      // Pointer dereference (*ptr)
 class AddressOfExpression;        // Address-of operations (&var)
@@ -130,6 +132,7 @@ enum class ASTNodeType {
     IDENTIFIER,        // Variable and function name references
     BINARY_OP,         // Binary operations: +, -, *, /, ==, !=, <, >, &&, ||, etc.
     UNARY_OP,          // Unary operations: -, !, & (address-of)
+    ASSIGNMENT,        // Assignment operations: variable = expression
     FUNCTION_CALL,     // Function call expressions with arguments
     ARRAY_ACCESS,      // Array element access (future extension)
     DEREFERENCE,       // Pointer dereference operation (*ptr)
@@ -507,6 +510,77 @@ public:
      * Calls visitor.visit(*this) to enable type-safe visitor dispatch.
      * The visitor typically processes the operands recursively before
      * handling the operation itself.
+     */
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @class AssignmentExpression
+ * @brief Represents assignment operations between an lvalue and an expression
+ * 
+ * AssignmentExpression handles assignment operations where a value is assigned
+ * to a variable or other assignable expression (lvalue). This allows for
+ * modification of previously declared variables.
+ * 
+ * **Assignment Syntax:**
+ * ```
+ * variable = expression
+ * *pointer = expression
+ * array[index] = expression (future extension)
+ * ```
+ * 
+ * **Semantic Rules:**
+ * - The left side must be a valid lvalue (assignable location)
+ * - The variable must not be declared as const
+ * - The expression type must be compatible with the variable type
+ * - The variable must be previously declared and in scope
+ * 
+ * **Type Checking:**
+ * The semantic analyzer ensures that:
+ * - The target variable exists and is accessible
+ * - The variable is not a const variable
+ * - The assignment expression type is compatible with the variable type
+ * - The left side is a valid lvalue expression
+ * 
+ * **Code Generation:**
+ * Assignment generates a store instruction that:
+ * - Evaluates the right-hand expression
+ * - Stores the result into the memory location of the left-hand variable
+ * - Returns the assigned value (assignments are expressions)
+ */
+class EMLANG_API AssignmentExpression : public Expression {
+public:
+    ExpressionPtr target;       // Left-hand side (lvalue) - variable to assign to
+    ExpressionPtr value;        // Right-hand side (rvalue) - expression to assign
+    
+    /**
+     * @brief Constructs a new AssignmentExpression
+     * @param target Target lvalue expression (takes ownership)
+     * @param value Value expression to assign (takes ownership)
+     * @param line Source line number
+     * @param column Source column number
+     * 
+     * The assignment expression takes ownership of both the target and value
+     * expressions through unique_ptr, ensuring proper memory management.
+     */
+    AssignmentExpression(ExpressionPtr target, ExpressionPtr value, size_t line = 0, size_t column = 0);
+    
+    /**
+     * @brief Returns a string representation of this assignment
+     * @return Formatted string showing the assignment structure
+     * 
+     * Example output: "Assignment(variable = expression)" where target and value
+     * are recursively formatted representations of the respective expressions.
+     */
+    std::string toString() const override;
+    
+    /**
+     * @brief Accepts a visitor for processing this assignment
+     * @param visitor The visitor to accept
+     * 
+     * Calls visitor.visit(*this) to enable type-safe visitor dispatch.
+     * The visitor typically processes the target and value expressions
+     * before handling the assignment itself.
      */
     void accept(ASTVisitor& visitor) override;
 };
@@ -1550,6 +1624,15 @@ public:
      * and result type determination.
      */
     virtual void visit(UnaryOpExpression& node) = 0;
+
+    /**
+     * @brief Visits an assignment expression node
+     * @param node The assignment expression to process
+     * 
+     * Typically handles target and value processing, type checking,
+     * and assignment semantics validation.
+     */
+    virtual void visit(AssignmentExpression& node) = 0;
     
     /**
      * @brief Visits a function call expression node

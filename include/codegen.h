@@ -976,6 +976,20 @@ public:
     void visit(ExpressionStatement& node) override;
     
     /**
+     * @brief Generates LLVM IR for assignment expressions
+     * @param node Assignment expression node (target = value)
+     * 
+     * Handles variable and memory location assignments:
+     * - Target resolution (variables or dereferenced pointers)
+     * - Value evaluation and type checking
+     * - Store instruction generation for memory updates
+     * - Result value propagation for expression chaining
+     * 
+     * Ensures proper semantics for both simple variables and dereferenced pointers.
+     */
+    void visit(AssignmentExpression& node) override;
+    
+    /**
      * @brief Generates LLVM IR for the program root node
      * @param node Program node containing all top-level statements
      * 

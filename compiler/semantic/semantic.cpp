@@ -96,6 +96,10 @@ bool SemanticAnalyzer::isCompatibleType(const std::string& expected, const std::
     // Special case: allow "string" literals to be assigned to "char" (single character)
     if (actual == "string" && expected == "char") return true;
     
+    // Special case: allow "null" literals to be assigned to any pointer type
+    if (actual == "null" && isPointerType(expected)) return true;
+    if (expected == "null" && isPointerType(actual)) return true;
+    
     return false;
 }
 
@@ -303,7 +307,11 @@ void SemanticAnalyzer::visit(BinaryOpExpression& node) {
     }
     // Equality operators
     else if (node.operator_ == "==" || node.operator_ == "!=") {
-        if (!isCompatibleType(leftType, rightType)) {
+        // Special Case: null and pointer comparison
+        bool isNullComparison = (leftType == "null" && isPointerType(rightType)) || 
+                               (rightType == "null" && isPointerType(leftType));
+        
+        if (!isCompatibleType(leftType, rightType) && !isNullComparison) {
             error("Equality operations require compatible types", node.line, node.column);
             currentExpressionType = "error";
             return;
@@ -460,8 +468,10 @@ void SemanticAnalyzer::visit(BlockStatement& node) {
 
 void SemanticAnalyzer::visit(IfStatement& node) {
     std::string conditionType = getExpressionType(*node.condition);
-    if (!isBooleanType(conditionType)) {
-        error("If condition must be boolean type", node.line, node.column);
+    // The if condition can be of boolean type or any value.
+    // Integer and pointer types are evaluated as boolean (0 = false, other = true)
+    if (!isBooleanType(conditionType) && !isNumericType(conditionType) && !isPointerType(conditionType)) {
+        error("If condition must be boolean, numeric or pointer type", node.line, node.column);
     }
     
     if (node.thenBranch) {
@@ -475,8 +485,10 @@ void SemanticAnalyzer::visit(IfStatement& node) {
 
 void SemanticAnalyzer::visit(WhileStatement& node) {
     std::string conditionType = getExpressionType(*node.condition);
-    if (!isBooleanType(conditionType)) {
-        error("While condition must be boolean type", node.line, node.column);
+    // While condition can be of boolean type or any value
+    // Integer and pointer types are evaluated as boolean (0 = false, other = true)
+    if (!isBooleanType(conditionType) && !isNumericType(conditionType) && !isPointerType(conditionType)) {
+        error("While condition must be boolean, numeric or pointer type", node.line, node.column);
     }
     
     if (node.body) {
@@ -525,6 +537,61 @@ void SemanticAnalyzer::visit(AddressOfExpression& node) {
     
     // Address-of operation creates a pointer to the operand type
     currentExpressionType = makePointerType(operandType);
+}
+
+void SemanticAnalyzer::visit(AssignmentExpression& node) {
+    // Check if target is a valid lvalue that can be assigned to
+    node.target->accept(*this);
+    std::string targetType = currentExpressionType;
+    
+    // Check if target is a valid lvalue
+    bool isValidLvalue = false;
+    if (auto* identExpr = dynamic_cast<IdentifierExpression*>(node.target.get())) {
+        // Target is an identifier, check if it exists and is not a constant
+        Symbol* symbol = currentScope->lookup(identExpr->name);
+        if (!symbol) {
+            error("Undefined variable: " + identExpr->name, node.line, node.column);
+            currentExpressionType = "error";
+            return;
+        }
+        
+        if (symbol->isConstant) {
+            error("Cannot assign to const variable: " + identExpr->name, node.line, node.column);
+            currentExpressionType = "error";
+            return;
+        }
+        
+        isValidLvalue = true;
+    } else if (dynamic_cast<DereferenceExpression*>(node.target.get())) {
+        // Target is a dereference expression, which is a valid lvalue
+        if (!isPointerType(targetType)) {
+            error("Cannot dereference non-pointer type: " + targetType, node.line, node.column);
+            currentExpressionType = "error";
+            return;
+        }
+        isValidLvalue = true;
+    }
+    
+    if (!isValidLvalue) {
+        error("Left side of assignment is not a valid lvalue", node.line, node.column);
+        currentExpressionType = "error";
+        return;
+    }
+    
+    // Evaluate and check the value expression
+    node.value->accept(*this);
+    std::string valueType = currentExpressionType;
+    
+    // Check type compatibility
+    if (!isCompatibleType(targetType, valueType)) {
+        error("Type mismatch in assignment: cannot assign " + valueType + " to " + targetType, 
+              node.line, node.column);
+        currentExpressionType = "error";
+        return;
+    }
+    
+    // Assignment expressions have the type of the target
+    currentExpressionType = targetType;
 }
 
 void SemanticAnalyzer::visit(Program& node) {

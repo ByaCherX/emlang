@@ -61,6 +61,15 @@ public:
         node.operand->accept(*this);
         indent--;
     }
+
+    void visit(AssignmentExpression& node) override {
+        printIndent();
+        std::cout << "AssignmentExpression: =" << std::endl;
+        indent++;
+        node.target->accept(*this);
+        node.value->accept(*this);
+        indent--;
+    }
     
     void visit(FunctionCallExpression& node) override {
         printIndent();

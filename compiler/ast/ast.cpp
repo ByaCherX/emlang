@@ -71,6 +71,18 @@ void UnaryOpExpression::accept(ASTVisitor& visitor) {
     visitor.visit(*this);
 }
 
+// AssignmentExpression
+AssignmentExpression::AssignmentExpression(ExpressionPtr target, ExpressionPtr value, size_t line, size_t column)
+    : Expression(ASTNodeType::ASSIGNMENT, line, column), target(std::move(target)), value(std::move(value)) {}
+
+std::string AssignmentExpression::toString() const {
+    return "Assignment(" + target->toString() + " = " + value->toString() + ")";
+}
+
+void AssignmentExpression::accept(ASTVisitor& visitor) {
+    visitor.visit(*this);
+}
+
 // FunctionCallExpression
 FunctionCallExpression::FunctionCallExpression(const std::string& name, std::vector<ExpressionPtr> args, size_t line, size_t column)
     : Expression(ASTNodeType::FUNCTION_CALL, line, column), functionName(name), arguments(std::move(args)) {}
