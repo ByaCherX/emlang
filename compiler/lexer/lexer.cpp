@@ -15,72 +15,8 @@ std::string Token::toString() const {
 }
 
 std::string Token::tokenTypeToString(TokenType type) {    
-    static const std::map<TokenType, std::string> tokenNames = {
-        {TokenType::NUMBER, "NUMBER"},
-        {TokenType::STRING, "STRING"},
-        {TokenType::CHAR_LITERAL, "CHAR_LITERAL"},
-        {TokenType::IDENTIFIER, "IDENTIFIER"},
-        {TokenType::LET, "LET"},
-        {TokenType::CONST, "CONST"},
-        {TokenType::FUNCTION, "FUNCTION"},
-        {TokenType::EXTERN, "EXTERN"},
-        {TokenType::IF, "IF"},
-        {TokenType::ELSE, "ELSE"},
-        {TokenType::WHILE, "WHILE"},
-        {TokenType::FOR, "FOR"},
-        {TokenType::RETURN, "RETURN"},
-        {TokenType::TRUE, "TRUE"},
-        {TokenType::FALSE, "FALSE"},
-        {TokenType::NULL_TOKEN, "NULL"},
-
-        // C-style primitive type tokens
-        {TokenType::INT8, "INT8"},
-        {TokenType::INT16, "INT16"},
-        {TokenType::INT32, "INT32"},
-        {TokenType::INT64, "INT64"},
-        {TokenType::ISIZE, "ISIZE"},
-        {TokenType::UINT8, "UINT8"},
-        {TokenType::UINT16, "UINT16"},
-        {TokenType::UINT32, "UINT32"},
-        {TokenType::UINT64, "UINT64"},
-        {TokenType::USIZE, "USIZE"},
-        {TokenType::FLOAT, "FLOAT"},
-        {TokenType::DOUBLE, "DOUBLE"},
-        {TokenType::CHAR, "CHAR"},
-        {TokenType::STR, "STR"},
-        {TokenType::BOOL, "BOOL"},
-        
-        {TokenType::PLUS, "PLUS"},
-        {TokenType::MINUS, "MINUS"},
-        {TokenType::MULTIPLY, "MULTIPLY"},
-        {TokenType::DIVIDE, "DIVIDE"},
-        {TokenType::MODULO, "MODULO"},
-        {TokenType::ASSIGN, "ASSIGN"},
-        {TokenType::EQUAL, "EQUAL"},
-        {TokenType::NOT_EQUAL, "NOT_EQUAL"},
-        {TokenType::LESS_THAN, "LESS_THAN"},
-        {TokenType::GREATER_THAN, "GREATER_THAN"},
-        {TokenType::LESS_EQUAL, "LESS_EQUAL"},
-        {TokenType::GREATER_EQUAL, "GREATER_EQUAL"},
-        {TokenType::LOGICAL_AND, "LOGICAL_AND"},
-        {TokenType::LOGICAL_OR, "LOGICAL_OR"},
-        {TokenType::LOGICAL_NOT, "LOGICAL_NOT"},
-        {TokenType::AMPERSAND, "AMPERSAND"},
-        {TokenType::SEMICOLON, "SEMICOLON"},
-        {TokenType::COMMA, "COMMA"},
-        {TokenType::DOT, "DOT"},
-        {TokenType::COLON, "COLON"},
-        {TokenType::LEFT_PAREN, "LEFT_PAREN"},
-        {TokenType::RIGHT_PAREN, "RIGHT_PAREN"},
-        {TokenType::LEFT_BRACE, "LEFT_BRACE"},
-        {TokenType::RIGHT_BRACE, "RIGHT_BRACE"},
-        {TokenType::NEWLINE, "NEWLINE"},
-        {TokenType::EOF_TOKEN, "EOF"},
-        {TokenType::INVALID, "INVALID"}
-    };
-    
-    auto it = tokenNames.find(type);
-    return (it != tokenNames.end()) ? it->second : "UNKNOWN";
+    auto it = emlang::tokenNames.find(type);
+    return (it != emlang::tokenNames.end()) ? it->second : "UNKNOWN";
 }
 
 // Lexer constructor
