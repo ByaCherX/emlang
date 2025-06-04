@@ -278,7 +278,35 @@ StatementPtr Parser::parseExpressionStatement() {
 }
 
 ExpressionPtr Parser::parseExpression() {
-    return parseLogicalOr();
+    // First parse the left-hand side as a logical OR expression
+    auto expr = parseLogicalOr();
+    
+    // Check for assignment operator
+    if (match(TokenType::ASSIGN)) {
+        Token assignToken = tokens[current - 1];
+        
+        // Parse the right-hand side (another expression)
+        ExpressionPtr right = parseExpression();
+        
+        // Validate that the left expression is a valid lvalue (can be assigned to)
+        // Currently, we support identifiers and dereferenced pointers as lvalues
+        bool isValidLvalue = false;
+        
+        if (dynamic_cast<IdentifierExpression*>(expr.get()) || 
+            dynamic_cast<DereferenceExpression*>(expr.get())) {
+            isValidLvalue = true;
+        }
+        
+        if (!isValidLvalue) {
+            error("Left-hand side of assignment is not a valid lvalue");
+        }
+        
+        // Return a new AssignmentExpression
+        return std::make_unique<AssignmentExpression>(std::move(expr), std::move(right), 
+                                                   assignToken.line, assignToken.column);
+    }
+    
+    return expr;
 }
 
 ExpressionPtr Parser::parseLogicalOr() {

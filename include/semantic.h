@@ -673,6 +673,9 @@ public:
      * - Reports invalid address-of errors
      */
     void visit(AddressOfExpression& node) override;
+
+    /**/
+    void visit(AssignmentExpression& node) override;
     
     /**
      * @brief Visits a variable declaration (let/const statements)

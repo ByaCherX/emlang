@@ -527,6 +527,61 @@ void SemanticAnalyzer::visit(AddressOfExpression& node) {
     currentExpressionType = makePointerType(operandType);
 }
 
+void SemanticAnalyzer::visit(AssignmentExpression& node) {
+    // Check if target is a valid lvalue that can be assigned to
+    node.target->accept(*this);
+    std::string targetType = currentExpressionType;
+    
+    // Check if target is a valid lvalue
+    bool isValidLvalue = false;
+    if (auto* identExpr = dynamic_cast<IdentifierExpression*>(node.target.get())) {
+        // Target is an identifier, check if it exists and is not a constant
+        Symbol* symbol = currentScope->lookup(identExpr->name);
+        if (!symbol) {
+            error("Undefined variable: " + identExpr->name, node.line, node.column);
+            currentExpressionType = "error";
+            return;
+        }
+        
+        if (symbol->isConstant) {
+            error("Cannot assign to const variable: " + identExpr->name, node.line, node.column);
+            currentExpressionType = "error";
+            return;
+        }
+        
+        isValidLvalue = true;
+    } else if (dynamic_cast<DereferenceExpression*>(node.target.get())) {
+        // Target is a dereference expression, which is a valid lvalue
+        if (!isPointerType(targetType)) {
+            error("Cannot dereference non-pointer type: " + targetType, node.line, node.column);
+            currentExpressionType = "error";
+            return;
+        }
+        isValidLvalue = true;
+    }
+    
+    if (!isValidLvalue) {
+        error("Left side of assignment is not a valid lvalue", node.line, node.column);
+        currentExpressionType = "error";
+        return;
+    }
+    
+    // Evaluate and check the value expression
+    node.value->accept(*this);
+    std::string valueType = currentExpressionType;
+    
+    // Check type compatibility
+    if (!isCompatibleType(targetType, valueType)) {
+        error("Type mismatch in assignment: cannot assign " + valueType + " to " + targetType, 
+              node.line, node.column);
+        currentExpressionType = "error";
+        return;
+    }
+    
+    // Assignment expressions have the type of the target
+    currentExpressionType = targetType;
+}
+
 void SemanticAnalyzer::visit(Program& node) {
     for (auto& stmt : node.statements) {
         stmt->accept(*this);
