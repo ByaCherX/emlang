@@ -13,6 +13,11 @@
 
 EMLang is a statically-typed systems programming language designed for high-performance applications with ahead-of-time (AOT) compilation using LLVM. It combines modern language features with C-like performance and memory control.
 
+> [!Warning]
+> **This language is not designed for production use, it is created for testing and learning purposes only.**
+> It is not recommended to use it in production systems.
+> It is a work in progress and may not be fully functional or stable.
+
 </div>
 
 ---
