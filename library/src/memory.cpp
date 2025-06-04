@@ -1,4 +1,4 @@
-#include "memory.h"
+#include "emlang_memory.h"
 #include <stdlib.h>
 #include <string.h>
 

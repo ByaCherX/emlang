@@ -1,4 +1,4 @@
-#include "string.h"
+#include "emlang_string.h"
 #include <string.h>
 
 extern "C" {
