@@ -31,6 +31,7 @@
 #pragma once
 
 #include "ast.h"
+#include "builtins.h"
 #include <map>
 #include <string>
 #include <vector>
@@ -790,6 +791,19 @@ public:
      * - Reports any program-level semantic errors
      */
     void visit(Program& node) override;
+    
+    // ======================== BUILT-IN FUNCTION SUPPORT ========================
+    
+    /**
+     * @brief Registers built-in functions in the global scope
+     * 
+     * This method:
+     * - Gets built-in functions from builtins.cpp
+     * - Registers each built-in function as a symbol in global scope
+     * - Sets appropriate function types and signatures
+     * - Enables automatic built-in function resolution
+     */
+    void registerBuiltinFunctions();
     
 private:
     // Current expression type (used during type checking)
