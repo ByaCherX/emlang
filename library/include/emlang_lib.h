@@ -2,11 +2,11 @@
 #define EMLANG_LIB_H
 
 // Include all EMLang library modules
-#include "math.h"
-#include "io.h" 
-#include "string.h"
-#include "memory.h"
-#include "utility.h"
+#include "emlang_math.h"
+#include "emlang_io.h" 
+#include "emlang_string.h"
+#include "emlang_memory.h"
+#include "emlang_utility.h"
 
 #ifdef __cplusplus
 extern "C" {

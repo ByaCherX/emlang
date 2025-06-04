@@ -15,11 +15,11 @@ set(LIBRARY_SOURCES
 # Library header files
 set(LIBRARY_HEADERS
     include/emlang_lib.h
-    include/math.h
-    include/io.h
-    include/string.h
-    include/memory.h
-    include/utility.h
+    include/emlang_math.h
+    include/emlang_io.h
+    include/emlang_string.h
+    include/emlang_memory.h
+    include/emlang_utility.h
 )
 
 # Create static library

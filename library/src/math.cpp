@@ -1,4 +1,4 @@
-#include "math.h"
+#include "emlang_math.h"
 #include <stdlib.h>
 #include <time.h>
 
