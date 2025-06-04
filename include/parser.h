@@ -610,6 +610,8 @@ private:
     /**
      * @brief Reports a parsing error with detailed context information
      * @param message Descriptive error message explaining what went wrong
+     * @param line Optional line number for the error (0 to use current token's line)
+     * @param column Optional column number for the error (0 to use current token's column)
      * @throws ParseError with comprehensive error information
      * 
      * This method creates detailed error reports that include:
@@ -621,7 +623,7 @@ private:
      * The error includes enough information for IDE integration and
      * helpful compiler diagnostics.
      */
-    void error(const std::string& message);
+    void error(const std::string& message, size_t line = 0, size_t column = 0);
     
     /**
      * @brief Performs error recovery by synchronizing to a known safe state

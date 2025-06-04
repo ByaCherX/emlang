@@ -542,11 +542,18 @@ std::vector<ExpressionPtr> Parser::parseArgumentList() {
     return arguments;
 }
 
-void Parser::error(const std::string& message) {
-    Token& token = currentToken();
-    std::cerr << "Parse error at " << token.line << ":" << token.column 
-              << " (" << Token::tokenTypeToString(token.type) << " '" << token.value << "'): " 
-              << message << std::endl;
+void Parser::error(const std::string& message, size_t line, size_t column) {
+    if (line == 0 || column == 0) {
+        Token& token = currentToken();
+        line = token.line;
+        column = token.column;
+        std::cerr << "Parse error at " << token.line << ":" << token.column 
+                  << " (" << Token::tokenTypeToString(token.type) << " '" << token.value << "'): " 
+                  << message << std::endl;
+    } else {
+        std::cerr << "Parse error at " << line << ":" << column << ": " 
+                  << message << std::endl;
+    }
 }
 
 void Parser::synchronize() {
