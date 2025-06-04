@@ -7,9 +7,10 @@
 **A Modern Systems Programming Language with LLVM Backend**
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](#building)
-[![LLVM](https://img.shields.io/badge/LLVM-14+-blue.svg)](https://llvm.org/)
+[![LLVM](https://img.shields.io/badge/LLVM-17+-blue.svg)](https://llvm.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![C++](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](#prerequisites)
+[![v0.9.26](https://img.shields.io/badge/EMLang_Version-0.9.26-purple.svg)](version)
 
 EMLang is a statically-typed systems programming language designed for high-performance applications with ahead-of-time (AOT) compilation using LLVM. It combines modern language features with C-like performance and memory control.
 
