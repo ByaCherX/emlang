@@ -1,5 +1,5 @@
+add_subdirectory(ast)
 # Add subdirectories for each component as OBJECT libraries
-add_subdirectory(lexer)
 add_library(emlang_compiler SHARED
     lexer/lexer.cpp
     ast/ast.cpp
@@ -7,13 +7,13 @@ add_library(emlang_compiler SHARED
     semantic/semantic.cpp
     codegen/codegen.cpp
     builtins.cpp
-    # Include all object files from the OBJECT libraries
-    $<TARGET_OBJECTS:emlang_lexer>
+
+    $<TARGET_OBJECTS:emlang_ast>
 )
 
 target_include_directories(emlang_compiler PUBLIC
     ${CMAKE_SOURCE_DIR}/include
-    ${CMAKE_SOURCE_DIR}/include/lexer
+    ${CMAKE_SOURCE_DIR}/include/ast
 )
 
 # DLL export definitions
