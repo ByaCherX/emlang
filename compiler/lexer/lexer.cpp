@@ -1,23 +1,11 @@
-#include "../include/lexer.h"
+#include "lexer/lexer_core.h"
+#include "lexer/token.h"
 #include <iostream>
 #include <cctype>
 #include <map>
 #include <stdexcept>
 
 namespace emlang {
-
-// Token constructor
-Token::Token(TokenType type, const std::string& value, size_t line, size_t column)
-    : type(type), value(value), line(line), column(column) {}
-
-std::string Token::toString() const {
-    return tokenTypeToString(type) + "(" + value + ") at " + std::to_string(line) + ":" + std::to_string(column);
-}
-
-std::string Token::tokenTypeToString(TokenType type) {    
-    auto it = emlang::tokenNames.find(type);
-    return (it != emlang::tokenNames.end()) ? it->second : "UNKNOWN";
-}
 
 // Lexer constructor
 Lexer::Lexer(const std::string& source) 
@@ -122,39 +110,8 @@ std::string Lexer::readIdentifier() {
     return identifier;
 }
 
-TokenType Lexer::getKeywordType(const std::string& identifier) {
-    static const std::map<std::string, TokenType> keywords = {
-        {"let", TokenType::LET},
-        {"const", TokenType::CONST},
-        {"function", TokenType::FUNCTION},
-        {"extern", TokenType::EXTERN},
-        {"if", TokenType::IF},
-        {"else", TokenType::ELSE},
-        {"while", TokenType::WHILE},
-        {"for", TokenType::FOR},
-        {"return", TokenType::RETURN},
-        {"true", TokenType::TRUE},
-        {"false", TokenType::FALSE},
-        {"null", TokenType::NULL_TOKEN},
-          // C-style primitive type keywords
-        {"int8", TokenType::INT8},
-        {"int16", TokenType::INT16},
-        {"int32", TokenType::INT32},
-        {"int64", TokenType::INT64},
-        {"isize", TokenType::ISIZE},
-        {"uint8", TokenType::UINT8},
-        {"uint16", TokenType::UINT16},
-        {"uint32", TokenType::UINT32},
-        {"uint64", TokenType::UINT64},
-        {"usize", TokenType::USIZE},
-        {"float", TokenType::FLOAT},
-        {"double", TokenType::DOUBLE},
-        {"char", TokenType::CHAR},
-        {"str", TokenType::STR},
-        {"bool", TokenType::BOOL}
-    };
-    
-    auto it = keywords.find(identifier);
+TokenType Lexer::getKeywordType(const std::string& identifier) {    
+    auto it = emlang::keywords.find(identifier);
     return (it != keywords.end()) ? it->second : TokenType::IDENTIFIER;
 }
 

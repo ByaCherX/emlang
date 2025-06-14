@@ -1,4 +1,5 @@
 add_subdirectory(semantic)
+
 add_library(emlang_compiler SHARED
     lexer/lexer.cpp
     ast/ast.cpp
@@ -6,6 +7,7 @@ add_library(emlang_compiler SHARED
     semantic/semantic.cpp
     codegen/codegen.cpp
     builtins.cpp
+    
     $<TARGET_OBJECTS:emlang_semantic>
 )
 
