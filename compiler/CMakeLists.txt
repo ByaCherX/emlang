@@ -1,4 +1,4 @@
-# EMLang Compiler DLL
+add_subdirectory(codegen)
 add_library(emlang_compiler SHARED
     lexer/lexer.cpp
     ast/ast.cpp
@@ -6,11 +6,12 @@ add_library(emlang_compiler SHARED
     semantic/semantic.cpp
     codegen/codegen.cpp
     builtins.cpp
-    emlang_compiler.rc  # Resource File
+    $<TARGET_OBJECTS:emlang_codegen>
 )
 
 target_include_directories(emlang_compiler PUBLIC
     ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/include/codegen
 )
 
 # DLL export definitions
