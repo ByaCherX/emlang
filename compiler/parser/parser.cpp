@@ -1,28 +1,51 @@
-#include "../include/parser.h"
+//===--- parser.cpp - Recursive Descent Parser ------------------*- C++ -*-===//
+//
+// Part of the RNR Project, under the Apache License v2.0 with LLVM Exceptions.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+// EMLang recursive descent parser implementation
+//===----------------------------------------------------------------------===//
+
+#include "parser/parser.h"
+#include "parser/parser_error.h"
 #include <iostream>
 #include <stdexcept>
 
 namespace emlang {
 
-// ParseError implementation
-Parser::ParseError::ParseError(const std::string& msg, const Token& tok)
-    : message(msg), token(tok) {}
+// ======================== Parser Constructor ========================
 
-const char* Parser::ParseError::what() const noexcept {
-    return message.c_str();
-}
-
-const Token& Parser::ParseError::getToken() const {
-    return token;
-}
-
-// Parser constructor
+/**
+ * @brief Initialize parser with token sequence from lexer
+ * @param tokens Complete token sequence to parse
+ * 
+ * The parser takes ownership of the token sequence and sets up
+ * the initial parsing state at position 0.
+ */
 Parser::Parser(const std::vector<Token>& tokens) : tokens(tokens), current(0) {}
 
+// ======================== Token Navigation Methods ========================
+
+/**
+ * @brief Get the current token being examined
+ * @return Reference to current token
+ * 
+ * This method provides access to the token at the current parsing position.
+ * Used throughout parsing to examine token types and extract values.
+ */
 Token& Parser::currentToken() {
     return tokens[current];
 }
 
+/**
+ * @brief Look ahead at tokens without consuming them
+ * @param offset Number of positions to look ahead (default: 1)
+ * @return Reference to the token at current + offset
+ * 
+ * Essential for parsing decisions and disambiguation. If the requested
+ * position is beyond the token sequence, returns the EOF token.
+ */
 Token& Parser::peekToken(size_t offset) {
     size_t index = current + offset;
     if (index >= tokens.size()) {
@@ -138,7 +161,7 @@ StatementPtr Parser::parseStatement() {
         
     } catch (const ParseError& e) {
         synchronize();
-        throw;
+        throw e;
     }
 }
 
@@ -161,7 +184,7 @@ StatementPtr Parser::parseVariableDeclaration() {
     
     consume(TokenType::SEMICOLON, "Expected ';' after variable declaration");
     
-    return std::make_unique<VariableDeclaration>(name.value, type, std::move(initializer), isConst, name.line, name.column);
+    return std::make_unique<VariableDecl>(name.value, type, std::move(initializer), isConst, name.line, name.column);
 }
 
 StatementPtr Parser::parseFunctionDeclaration() {
@@ -178,7 +201,7 @@ StatementPtr Parser::parseFunctionDeclaration() {
     
     auto body = parseBlockStatement();
     
-    return std::make_unique<FunctionDeclaration>(name.value, std::move(parameters), returnType, std::move(body), name.line, name.column);
+    return std::make_unique<FunctionDecl>(name.value, std::move(parameters), returnType, std::move(body), name.line, name.column);
 }
 
 StatementPtr Parser::parseExternFunctionDeclaration() {
@@ -196,14 +219,13 @@ StatementPtr Parser::parseExternFunctionDeclaration() {
     }
     
     consume(TokenType::SEMICOLON, "Expected ';' after extern function declaration");
-    
-    // Convert FunctionDeclaration::Parameter to ExternFunctionDeclaration::Parameter
-    std::vector<ExternFunctionDeclaration::Parameter> externParams;
+      // Convert FunctionDecl::Parameter to ExternFunctionDecl::Parameter
+    std::vector<Parameter> externParams;
     for (const auto& param : parameters) {
         externParams.push_back({param.name, param.type});
     }
     
-    return std::make_unique<ExternFunctionDeclaration>(name.value, std::move(externParams), returnType, name.line, name.column);
+    return std::make_unique<ExternFunctionDecl>(name.value, std::move(externParams), returnType, name.line, name.column);
 }
 
 StatementPtr Parser::parseIfStatement() {
@@ -219,7 +241,7 @@ StatementPtr Parser::parseIfStatement() {
         elseBranch = parseStatement();
     }
     
-    return std::make_unique<IfStatement>(std::move(condition), std::move(thenBranch), std::move(elseBranch), ifToken.line, ifToken.column);
+    return std::make_unique<IfStmt>(std::move(condition), std::move(thenBranch), std::move(elseBranch), ifToken.line, ifToken.column);
 }
 
 StatementPtr Parser::parseWhileStatement() {
@@ -230,7 +252,7 @@ StatementPtr Parser::parseWhileStatement() {
     
     auto body = parseStatement();
     
-    return std::make_unique<WhileStatement>(std::move(condition), std::move(body), whileToken.line, whileToken.column);
+    return std::make_unique<WhileStmt>(std::move(condition), std::move(body), whileToken.line, whileToken.column);
 }
 
 StatementPtr Parser::parseForStatement() {
@@ -251,7 +273,7 @@ StatementPtr Parser::parseReturnStatement() {
     
     consume(TokenType::SEMICOLON, "Expected ';' after return value");
     
-    return std::make_unique<ReturnStatement>(std::move(value), returnToken.line, returnToken.column);
+    return std::make_unique<ReturnStmt>(std::move(value), returnToken.line, returnToken.column);
 }
 
 StatementPtr Parser::parseBlockStatement() {
@@ -267,14 +289,14 @@ StatementPtr Parser::parseBlockStatement() {
     
     consume(TokenType::RIGHT_BRACE, "Expected '}' after block");
     
-    return std::make_unique<BlockStatement>(std::move(statements), leftBrace.line, leftBrace.column);
+    return std::make_unique<BlockStmt>(std::move(statements), leftBrace.line, leftBrace.column);
 }
 
 StatementPtr Parser::parseExpressionStatement() {
     auto expr = parseExpression();
     consume(TokenType::SEMICOLON, "Expected ';' after expression");
     
-    return std::make_unique<ExpressionStatement>(std::move(expr), expr->line, expr->column);
+    return std::make_unique<ExpressionStmt>(std::move(expr), expr->line, expr->column);
 }
 
 ExpressionPtr Parser::parseExpression() {
@@ -291,18 +313,16 @@ ExpressionPtr Parser::parseExpression() {
         // Validate that the left expression is a valid lvalue (can be assigned to)
         // Currently, we support identifiers and dereferenced pointers as lvalues
         bool isValidLvalue = false;
-        
-        if (dynamic_cast<IdentifierExpression*>(expr.get()) || 
-            dynamic_cast<DereferenceExpression*>(expr.get())) {
+          if (dynamic_cast<IdentifierExpr*>(expr.get()) || 
+            dynamic_cast<DereferenceExpr*>(expr.get())) {
             isValidLvalue = true;
         }
         
         if (!isValidLvalue) {
             error("Left-hand side of assignment is not a valid lvalue");
         }
-        
-        // Return a new AssignmentExpression
-        return std::make_unique<AssignmentExpression>(std::move(expr), std::move(right), 
+          // Return a new AssignmentExpr
+        return std::make_unique<AssignmentExpr>(std::move(expr), std::move(right),
                                                    assignToken.line, assignToken.column);
     }
     
@@ -315,7 +335,7 @@ ExpressionPtr Parser::parseLogicalOr() {
     while (match(TokenType::LOGICAL_OR)) {
         Token op = tokens[current - 1];
         auto right = parseLogicalAnd();
-        expr = std::make_unique<BinaryOpExpression>(std::move(expr), op.value, std::move(right), op.line, op.column);
+        expr = std::make_unique<BinaryOpExpr>(std::move(expr), op.value, std::move(right), op.line, op.column);
     }
     
     return expr;
@@ -327,7 +347,7 @@ ExpressionPtr Parser::parseLogicalAnd() {
     while (match(TokenType::LOGICAL_AND)) {
         Token op = tokens[current - 1];
         auto right = parseEquality();
-        expr = std::make_unique<BinaryOpExpression>(std::move(expr), op.value, std::move(right), op.line, op.column);
+        expr = std::make_unique<BinaryOpExpr>(std::move(expr), op.value, std::move(right), op.line, op.column);
     }
     
     return expr;
@@ -339,7 +359,7 @@ ExpressionPtr Parser::parseEquality() {
     while (match({TokenType::NOT_EQUAL, TokenType::EQUAL})) {
         Token op = tokens[current - 1];
         auto right = parseComparison();
-        expr = std::make_unique<BinaryOpExpression>(std::move(expr), op.value, std::move(right), op.line, op.column);
+        expr = std::make_unique<BinaryOpExpr>(std::move(expr), op.value, std::move(right), op.line, op.column);
     }
     
     return expr;
@@ -351,7 +371,7 @@ ExpressionPtr Parser::parseComparison() {
     while (match({TokenType::GREATER_THAN, TokenType::GREATER_EQUAL, TokenType::LESS_THAN, TokenType::LESS_EQUAL})) {
         Token op = tokens[current - 1];
         auto right = parseTerm();
-        expr = std::make_unique<BinaryOpExpression>(std::move(expr), op.value, std::move(right), op.line, op.column);
+        expr = std::make_unique<BinaryOpExpr>(std::move(expr), op.value, std::move(right), op.line, op.column);
     }
     
     return expr;
@@ -363,7 +383,7 @@ ExpressionPtr Parser::parseTerm() {
     while (match({TokenType::MINUS, TokenType::PLUS})) {
         Token op = tokens[current - 1];
         auto right = parseFactor();
-        expr = std::make_unique<BinaryOpExpression>(std::move(expr), op.value, std::move(right), op.line, op.column);
+        expr = std::make_unique<BinaryOpExpr>(std::move(expr), op.value, std::move(right), op.line, op.column);
     }
     
     return expr;
@@ -375,7 +395,7 @@ ExpressionPtr Parser::parseFactor() {
     while (match({TokenType::DIVIDE, TokenType::MULTIPLY, TokenType::MODULO})) {
         Token op = tokens[current - 1];
         auto right = parseUnary();
-        expr = std::make_unique<BinaryOpExpression>(std::move(expr), op.value, std::move(right), op.line, op.column);
+        expr = std::make_unique<BinaryOpExpr>(std::move(expr), op.value, std::move(right), op.line, op.column);
     }
     
     return expr;
@@ -385,21 +405,21 @@ ExpressionPtr Parser::parseUnary() {
     if (match({TokenType::LOGICAL_NOT, TokenType::MINUS})) {
         Token op = tokens[current - 1];
         auto right = parseUnary();
-        return std::make_unique<UnaryOpExpression>(op.value, std::move(right), op.line, op.column);
+        return std::make_unique<UnaryOpExpr>(op.value, std::move(right), op.line, op.column);
     }
     
     // Pointer dereference (*ptr)
     if (match(TokenType::MULTIPLY)) {
         Token op = tokens[current - 1];
         auto right = parseUnary();
-        return std::make_unique<DereferenceExpression>(std::move(right), op.line, op.column);
+        return std::make_unique<DereferenceExpr>(std::move(right), op.line, op.column);
     }
     
     // Address-of operator (&var)
     if (match(TokenType::AMPERSAND)) {
         Token op = tokens[current - 1];
         auto right = parseUnary();
-        return std::make_unique<AddressOfExpression>(std::move(right), op.line, op.column);
+        return std::make_unique<AddressOfExpr>(std::move(right), op.line, op.column);
     }
     
     return parseCall();
@@ -414,10 +434,10 @@ ExpressionPtr Parser::parseCall() {
             consume(TokenType::RIGHT_PAREN, "Expected ')' after arguments");
             
             // Convert identifier expression to function call
-            if (auto identifier = dynamic_cast<IdentifierExpression*>(expr.get())) {
+            if (auto identifier = dynamic_cast<IdentifierExpr*>(expr.get())) {
                 std::string funcName = identifier->name;
                 expr.release(); // Release ownership
-                expr = std::make_unique<FunctionCallExpression>(funcName, std::move(args), identifier->line, identifier->column);
+                expr = std::make_unique<FunctionCallExpr>(funcName, std::move(args), identifier->line, identifier->column);
             } else {
                 error("Invalid function call target");
             }
@@ -432,37 +452,37 @@ ExpressionPtr Parser::parseCall() {
 ExpressionPtr Parser::parsePrimary() {
     if (match(TokenType::TRUE)) {
         Token token = tokens[current - 1];
-        return std::make_unique<LiteralExpression>(LiteralExpression::LiteralType::BOOLEAN, "true", token.line, token.column);
+        return std::make_unique<LiteralExpr>(LiteralType::BOOLEAN, "true", token.line, token.column);
     }
     
     if (match(TokenType::FALSE)) {
         Token token = tokens[current - 1];
-        return std::make_unique<LiteralExpression>(LiteralExpression::LiteralType::BOOLEAN, "false", token.line, token.column);
+        return std::make_unique<LiteralExpr>(LiteralType::BOOLEAN, "false", token.line, token.column);
     }
     
     if (match(TokenType::NULL_TOKEN)) {
         Token token = tokens[current - 1];
-        return std::make_unique<LiteralExpression>(LiteralExpression::LiteralType::NULL_LITERAL, "null", token.line, token.column);
+        return std::make_unique<LiteralExpr>(LiteralType::NULL_LITERAL, "null", token.line, token.column);
     }
     
     if (match(TokenType::NUMBER)) {
         Token token = tokens[current - 1];
-        return std::make_unique<LiteralExpression>(LiteralExpression::LiteralType::NUMBER, token.value, token.line, token.column);
+        return std::make_unique<LiteralExpr>(LiteralType::NUMBER, token.value, token.line, token.column);
     }
 
     if (match(TokenType::STRING)) {
         Token token = tokens[current - 1];
-        return std::make_unique<LiteralExpression>(LiteralExpression::LiteralType::STRING, token.value, token.line, token.column);
+        return std::make_unique<LiteralExpr>(LiteralType::STRING, token.value, token.line, token.column);
     }
     
     if (match(TokenType::CHAR_LITERAL)) {
         Token token = tokens[current - 1];
-        return std::make_unique<LiteralExpression>(LiteralExpression::LiteralType::CHAR, token.value, token.line, token.column);
+        return std::make_unique<LiteralExpr>(LiteralType::CHAR, token.value, token.line, token.column);
     }
     
     if (match(TokenType::IDENTIFIER)) {
         Token token = tokens[current - 1];
-        return std::make_unique<IdentifierExpression>(token.value, token.line, token.column);
+        return std::make_unique<IdentifierExpr>(token.value, token.line, token.column);
     }
     
     if (match(TokenType::LEFT_PAREN)) {
@@ -542,8 +562,8 @@ std::string Parser::parseType() {
     return baseType;
 }
 
-std::vector<FunctionDeclaration::Parameter> Parser::parseParameterList() {
-    std::vector<FunctionDeclaration::Parameter> parameters;
+std::vector<Parameter> Parser::parseParameterList() {
+    std::vector<Parameter> parameters;
     
     if (!check(TokenType::RIGHT_PAREN)) {        
         do {
@@ -611,6 +631,19 @@ std::string Parser::parsePointerType() {
     // This method is for future advanced pointer parsing
     // For now, we use parseType() which already handles pointers
     return parseType();
+}
+
+// ======================== Parser::ParseError Implementation ========================
+
+Parser::ParseError::ParseError(const std::string& msg, const Token& tok)
+    : message(msg), token(tok) {}
+
+const char* Parser::ParseError::what() const noexcept {
+    return message.c_str();
+}
+
+const Token& Parser::ParseError::getToken() const {
+    return token;
 }
 
 } // namespace emlang
