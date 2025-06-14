@@ -3,16 +3,15 @@
 
 # Collect all semantic source files
 set(SEMANTIC_SOURCES
-    semantic.cpp
+    semantic_core.cpp
+    semantic_error.cpp
     analyzer.cpp
     type_checker.cpp
     symbol_table.cpp
-    semantic_error.cpp
 )
 
 # Collect all semantic header files
 set(SEMANTIC_HEADERS
-    ${CMAKE_SOURCE_DIR}/include/semantic/semantic.h
     ${CMAKE_SOURCE_DIR}/include/semantic/analyzer.h
     ${CMAKE_SOURCE_DIR}/include/semantic/type_checker.h
     ${CMAKE_SOURCE_DIR}/include/semantic/symbol_table.h
