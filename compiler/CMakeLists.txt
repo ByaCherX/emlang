@@ -1,5 +1,6 @@
 add_subdirectory(lexer)
 add_subdirectory(ast)
+add_subdirectory(parser)
 add_subdirectory(semantic)
 add_subdirectory(codegen)
 
@@ -13,6 +14,7 @@ add_library(emlang_compiler SHARED
 
     $<TARGET_OBJECTS:emlang_lexer>
     $<TARGET_OBJECTS:emlang_ast>
+    $<TARGET_OBJECTS:emlang_parser>
     $<TARGET_OBJECTS:emlang_semantic>
     $<TARGET_OBJECTS:emlang_codegen>
 )
@@ -21,6 +23,7 @@ target_include_directories(emlang_compiler PUBLIC
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/include/lexer
     ${CMAKE_SOURCE_DIR}/include/ast
+    ${CMAKE_SOURCE_DIR}/include/parser
     ${CMAKE_SOURCE_DIR}/include/semantic
     ${CMAKE_SOURCE_DIR}/include/codegen
 )
