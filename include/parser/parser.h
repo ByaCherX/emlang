@@ -21,21 +21,10 @@
 
 #pragma once
 
-// DLL Export/Import Macros for Windows
-#ifdef _WIN32
-    #ifdef EMLANG_EXPORTS
-        #define EMLANG_API __declspec(dllexport)
-    #elif defined(EMLANG_DLL)
-        #define EMLANG_API __declspec(dllimport)
-    #else
-        #define EMLANG_API
-    #endif
-#else
-    #define EMLANG_API
-#endif
-
+#include <emlang_export.h>
 #include "lexer.h"
 #include "ast.h"
+#include "parser/parser_error.h"
 #include <vector>
 #include <memory>
 
@@ -555,7 +544,7 @@ private:
      * - Parameter type (including pointer types)
      * - Optional default values (if supported)
      */
-    std::vector<FunctionDeclaration::Parameter> parseParameterList();
+    std::vector<Parameter> parseParameterList();
     
     /**
      * @brief Parses function call argument lists
