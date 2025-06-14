@@ -7,8 +7,8 @@
 // Semantic core interface for the EMLang programming language
 //===----------------------------------------------------------------------===//
 
-#ifndef EM_LANG_SEMANTIC_H
-#define EM_LANG_SEMANTIC_H
+#ifndef EM_LANG_SEMANTIC_CORE_H
+#define EM_LANG_SEMANTIC_CORE_H
 
 #pragma once
 
