@@ -1,17 +1,27 @@
+//===--- main.cpp - Compiler main entry implementation --------------------===//
+//
+// Part of the RNR Project, under the Apache License v2.0 with LLVM Exceptions.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+// Main Codegenerator Impl
+//===----------------------------------------------------------------------===//
+
 #include "lexer.h"
-#include "parser.h"
 #include "ast.h"
-#include "semantic.h"
-#include "codegen.h"
+#include "parser/parser.h"
+#include "semantic/analyzer.h"  //fix: semantic.h will rename when redesigned
+#include "codegen/codegen.h"
 #include <iostream>
 #include <fstream>
 #include <sstream>
 
 using namespace emlang;
+using emlang::codegen::OptimizationLevel;
 
 #define DEBUG_MODE 0
 
-std::string readFile(const std::string& filename) {
+static std::string readFile(const std::string& filename) {
     std::ifstream file(filename);
     if (!file.is_open()) {
         throw std::runtime_error("Could not open file: " + filename);
@@ -22,7 +32,7 @@ std::string readFile(const std::string& filename) {
     return buffer.str();
 }
 
-void printUsage(const char* programName) {
+static void printUsage(const char* programName) {
     std::cout << "Usage: " << programName << " <source_file> [options]" << std::endl;
     std::cout << "Options:" << std::endl;
     std::cout << "  -o, --output <file>     Specify output file name" << std::endl;
@@ -37,13 +47,13 @@ void printUsage(const char* programName) {
 struct CompilerOptions {
     std::string inputFile;
     std::string outputFile;
-    int optimizationLevel = 0;
+    OptimizationLevel optimizationLevel;
     bool emitLLVM = false;
     bool debug = false;
     bool showHelp = false;
 };
 
-CompilerOptions parseArguments(int argc, char* argv[]) {
+static CompilerOptions parseArguments(int argc, char* argv[]) {
     CompilerOptions options;
     
     for (int i = 1; i < argc; ++i) {
@@ -58,11 +68,11 @@ CompilerOptions parseArguments(int argc, char* argv[]) {
                 throw std::runtime_error("Option " + arg + " requires an argument");
             }
         } else if (arg == "-O1") {
-            options.optimizationLevel = 1;
+            options.optimizationLevel = OptimizationLevel::O1;
         } else if (arg == "-O2") {
-            options.optimizationLevel = 2;
+            options.optimizationLevel = OptimizationLevel::O2;
         } else if (arg == "-O3") {
-            options.optimizationLevel = 3;
+            options.optimizationLevel = OptimizationLevel::O3;
         } else if (arg == "--emit-llvm") {
             options.emitLLVM = true;
         } else if (arg == "--debug") {
@@ -118,8 +128,8 @@ int main(int argc, char* argv[]) {
         
         std::cout << "Compiling: " << options.inputFile << std::endl;
         std::cout << "Output: " << options.outputFile << std::endl;
-        if (options.optimizationLevel > 0) {
-            std::cout << "Optimization Level: O" << options.optimizationLevel << std::endl;
+        if (options.optimizationLevel > OptimizationLevel::None) {
+            std::cout << "Optimization Level: O" << static_cast<int>(options.optimizationLevel) << std::endl;
         }
         std::cout << std::endl;
         
@@ -127,11 +137,11 @@ int main(int argc, char* argv[]) {
         std::string source = readFile(options.inputFile);
         
         // Lexical analysis
-        Lexer lexer(source);
+        emlang::Lexer lexer(source);
         auto tokens = lexer.tokenize();
         
         // Syntax analysis
-        Parser parser(tokens);
+        emlang::Parser parser(tokens);
         auto ast = parser.parse();
         
         if (!ast) {
@@ -144,7 +154,7 @@ int main(int argc, char* argv[]) {
             std::cout << "=== SEMANTIC ANALYSIS ===" << std::endl;
         }
         
-        SemanticAnalyzer analyzer;
+        emlang::Analyzer analyzer;
         bool semanticSuccess = analyzer.analyze(*ast);
         
         if (!semanticSuccess) {
@@ -161,8 +171,8 @@ int main(int argc, char* argv[]) {
         }
         
         // Convert optimization level
-        OptimizationLevel optLevel = static_cast<OptimizationLevel>(options.optimizationLevel);
-        CodeGenerator codegen("emlang_module", optLevel);
+        OptimizationLevel optLevel = options.optimizationLevel;
+        emlang::codegen::CodeGenerator codegen("emlang_module", optLevel);
         codegen.generateIR(*ast);
         
         if (options.debug) {
@@ -170,11 +180,11 @@ int main(int argc, char* argv[]) {
         }
           // Output generation
         if (options.emitLLVM) {
-            codegen.writeIRToFile(options.outputFile);
+            codegen.writeCodeToFile(options.outputFile, true);
             std::cout << "LLVM IR written to: " << options.outputFile << std::endl;
         } else {
             try {
-                codegen.writeObjectFile(options.outputFile);
+                codegen.writeCodeToFile(options.outputFile, false);
                 std::cout << "Object file written to: " << options.outputFile << std::endl;
             } catch (const std::exception& e) {
                 std::cout << "Warning: Object file generation failed: " << e.what() << std::endl;
@@ -182,7 +192,7 @@ int main(int argc, char* argv[]) {
                 
                 // Fallback to LLVM IR
                 std::string llvmFile = options.inputFile.substr(0, options.inputFile.find_last_of('.')) + ".ll";
-                codegen.writeIRToFile(llvmFile);
+                codegen.writeCodeToFile(llvmFile, true);
                 std::cout << "LLVM IR written to: " << llvmFile << std::endl;
             }
         }
