@@ -40,9 +40,6 @@ target_compile_definitions(emlang_semantic PRIVATE EMLANG_EXPORTS)
 # Compiler-specific settings
 if(MSVC)
     target_compile_options(emlang_semantic PRIVATE 
-        /W4 
-        /WX- 
-        /wd4996  # Disable deprecation warnings
         /wd4251  # Disable DLL interface warnings
     )
     target_compile_definitions(emlang_semantic PRIVATE
