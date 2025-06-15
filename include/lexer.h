@@ -17,6 +17,5 @@
 // Include all lexer components
 #include "lexer/token.h"
 #include "lexer/lexer_core.h"
-#include "lexer/preprocessor.h"
 
 #endif // EM_LANG_LEXER_H
