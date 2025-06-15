@@ -10,7 +10,7 @@
 [![LLVM](https://img.shields.io/badge/LLVM-17+-blue.svg)](https://llvm.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![C++](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](#prerequisites)
-[![v0.9.26](https://img.shields.io/badge/EMLang_Version-0.9.26-purple.svg)](version)
+[![v0.9.26](https://img.shields.io/badge/EMLang_Version-1.0.0.alpha.1-purple.svg)](version)
 
 EMLang is a statically-typed systems programming language designed for high-performance applications with ahead-of-time (AOT) compilation using LLVM. It combines modern language features with C-like performance and memory control.
 
@@ -166,6 +166,8 @@ function controlFlow(): void {
 - **Optimization passes** integration
 
 ### 📚 **Standard Library**
+> [!Warning]
+> The emlang standard library is not available at the moment. It will be available in beta.
 The library provides essential functionality across multiple domains:
 
 - **I/O Operations**: `emlang_print_*`, `emlang_read_*`, console control
@@ -178,7 +180,7 @@ The library provides essential functionality across multiple domains:
 
 ### Prerequisites
 - **CMake** 3.10 or higher
-- **C++17** compatible compiler (GCC 7+, Clang 5+, MSVC 2017+)
+- **C++17** compatible compiler (GCC 9+, Clang 8+, MSVC 2017+)
 - **LLVM** 14+ (automatically detected, enables code generation)
 - **Git** for cloning and version control
 
@@ -370,93 +372,6 @@ done
 ./build/Debug/emlang_check --all tests/phase3_pointer_test.em
 ```
 
-## 📈 Development Roadmap
-
-### ✅ **Completed Phases**
-
-#### **Phase 1**: Core Type System
-- [x] Primitive integer types (int8, int16, int32, int64)
-- [x] Unsigned variants (uint8, uint16, uint32, uint64)
-- [x] Floating point types (float, double)
-- [x] Boolean and void types
-- [x] LLVM backend integration
-
-#### **Phase 2**: Character & String System  
-- [x] Unicode character support (`char` type)
-- [x] String literals with escape sequences
-- [x] Character literals with Unicode escapes
-- [x] UTF-8 string handling
-- [x] Comprehensive string operations
-
-#### **Phase 3**: C-Style Pointer System
-- [x] Pointer type declarations (`int32*`, `char**`)
-- [x] Address-of operator (`&variable`)
-- [x] Dereference operator (`*pointer`)
-- [x] Multi-level pointer support
-- [x] Pointer arithmetic and type safety
-- [x] Complete semantic analysis
-
-### 🚧 **In Progress**
-
-#### **Phase 4**: Advanced Features
-- [ ] Array types and operations
-- [ ] Struct/record types
-- [ ] Enum types
-- [ ] Pattern matching
-
-### 🔮 **Future Plans**
-
-#### **Phase 5**: Advanced Language Features
-- [ ] Generic types and functions
-- [ ] Module system with imports
-- [ ] Memory ownership model
-- [ ] Async/await support
-
-#### **Phase 6**: Development Tools
-- [ ] Language Server Protocol (LSP)
-- [ ] IDE integration and plugins
-- [ ] Package manager
-- [ ] Documentation generator
-
-## 📚 Library Reference
-
-### Standard Library Modules
-
-#### 🔢 **Mathematics** (`math.h`)
-```c
-float emlang_pow(float base, float exp);     // Power function
-float emlang_sqrt(float x);                  // Square root
-float emlang_sin(float x);                   // Sine function
-float emlang_cos(float x);                   // Cosine function
-float emlang_tan(float x);                   // Tangent function
-float emlang_abs(float x);                   // Absolute value
-```
-
-#### 📝 **String Operations** (`string.h`)
-```c
-int emlang_strlen(const char* str);                    // String length
-int emlang_strcmp(const char* str1, const char* str2); // String comparison  
-char* emlang_strcpy(char* dest, const char* src);      // String copy
-char* emlang_to_upper(char* str);                      // Convert to uppercase
-char* emlang_to_lower(char* str);                      // Convert to lowercase
-```
-
-#### 💾 **Memory Management** (`memory.h`)
-```c
-void* emlang_malloc(int size);              // Allocate memory
-void emlang_free(void* ptr);                // Free allocated memory
-void emlang_memset(void* ptr, int val, int size); // Set memory values
-```
-
-#### 🖥️ **Input/Output** (`io.h`)
-```c
-void emlang_print_int(int value);           // Print integer
-void emlang_print_str(const char* str);     // Print string
-void emlang_print_char(char c);             // Print character
-int emlang_read_int(void);                  // Read integer from input
-char emlang_read_char(void);                // Read character from input
-```
-
 ## 🤝 Contributing
 
 We welcome contributions to EMLang! Here's how you can help:
@@ -492,41 +407,14 @@ We welcome contributions to EMLang! Here's how you can help:
 - **Testing**: Additional test cases and edge cases
 
 ## 📄 License
-
 EMLang is released under the **MIT License**. See [LICENSE](LICENSE) file for details.
-
-```
-MIT License
-
-Copyright (c) 2025 EMLang Project
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
 
 ---
 
 ## 🔗 Links & Resources
 
-- **📖 Documentation**: [EMLang Language Guide](docs/)
 - **🐛 Issue Tracker**: [GitHub Issues](https://github.com/ByaCherX/emlang/issues)
 - **💬 Discussions**: [GitHub Discussions](https://github.com/ByaCherX/emlang/discussions)
-- **📧 Contact**: [project@emlang.dev](mailto:project@emlang.dev)
 
 ---
 
