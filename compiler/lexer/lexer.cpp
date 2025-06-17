@@ -327,8 +327,9 @@ Token Lexer::nextToken() {
             default:
                 std::string invalidChar(1, currentChar);
                 advance(); // Skip the invalid character for recovery
-                error("Unexpected character: '" + invalidChar + "' (0x" + 
-                      std::to_string(static_cast<unsigned char>(invalidChar[0])) + ")");
+                std::stringstream hexStream;
+                hexStream << std::hex << static_cast<int>(static_cast<unsigned char>(invalidChar[0]));
+                error("Unexpected character: '" + invalidChar + "' (0x" + hexStream.str() + ")");
                 return Token(TokenType::INVALID, invalidChar, tokenLine, tokenColumn);
         }
     }
