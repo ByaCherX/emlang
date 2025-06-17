@@ -78,7 +78,7 @@ enum class TokenType {
     BITWISE_XOR =           99,    // ^ bitwise XOR operator
     BITWISE_INVERT =        100,   // ~ bitwise INVERSION operator
 #ifdef EMLANG_ENABLE_POINTERS
-    AMPERSAND =             85,    // & address-of operator
+    AMPERSAND =             101,   // & address-of operator
 #endif
     
     // Delimiters (0x70-0x8F)
