@@ -76,7 +76,7 @@ enum class TokenType {
     BITWISE_AND =           97,    // & bitwise AND operator
     BITWISE_OR =            98,    // | bitwise OR operator
     BITWISE_XOR =           99,    // ^ bitwise XOR operator
-    BITWISE_IVERT =         100,   // ~ bitwise INVERSION operator
+    BITWISE_INVERT =        100,   // ~ bitwise INVERSION operator
 #ifdef EMLANG_ENABLE_POINTERS
     AMPERSAND =             85,    // & address-of operator
 #endif
