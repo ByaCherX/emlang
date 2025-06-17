@@ -307,7 +307,7 @@ Token Lexer::nextToken() {
             case '&': advance(); return Token(TokenType::BITWISE_AND, "&", tokenLine, tokenColumn);
             case '|': advance(); return Token(TokenType::BITWISE_OR, "|", tokenLine, tokenColumn);
             case '^': advance(); return Token(TokenType::BITWISE_XOR, "^", tokenLine, tokenColumn);
-            case '~': advance(); return Token(TokenType::BITWISE_IVERT, "~", tokenLine, tokenColumn);
+            case '~': advance(); return Token(TokenType::BITWISE_INVERT, "~", tokenLine, tokenColumn);
             
             // Delimiters and punctuation
             case ';': advance(); return Token(TokenType::SEMICOLON, ";", tokenLine, tokenColumn);
@@ -327,9 +327,8 @@ Token Lexer::nextToken() {
             default:
                 std::string invalidChar(1, currentChar);
                 advance(); // Skip the invalid character for recovery
-                std::stringstream hexStream;
-                hexStream << std::hex << static_cast<int>(static_cast<unsigned char>(invalidChar[0]));
-                error("Unexpected character: '" + invalidChar + "' (0x" + hexStream.str() + ")");
+                error("Unexpected character: '" + invalidChar + "' (0x" + 
+                      std::to_string(static_cast<unsigned char>(invalidChar[0])) + ")");
                 return Token(TokenType::INVALID, invalidChar, tokenLine, tokenColumn);
         }
     }

@@ -152,7 +152,7 @@ static const std::map<TokenType, std::string> tokenNames = {
     {TokenType::BITWISE_AND, "BITWISE_AND"},
     {TokenType::BITWISE_OR, "BITWISE_OR"},
     {TokenType::BITWISE_XOR, "BITWISE_XOR"},
-    {TokenType::BITWISE_IVERT, "BITWISE_IVERT"},
+    {TokenType::BITWISE_INVERT, "BITWISE_IVERT"},
 #ifdef EMLANG_ENABLE_POINTERS
     {TokenType::AMPERSAND, "AMPERSAND"},
 #endif
