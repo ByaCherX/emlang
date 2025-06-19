@@ -7,18 +7,27 @@
 // Base AST node implementations
 //===----------------------------------------------------------------------===//
 
-#include "ast.h"
+#include "ast/ast_base.h"
+#include "ast/visitor.h"
 #include <sstream>
 
 namespace emlang {
 
 // ASTNode base class implementation
-ASTNode::ASTNode(ASTNodeType type, size_t line, size_t column)
+ASTNode::ASTNode(NodeType type, size_t line, size_t column)
     : type(type), line(line), column(column) {}
+
+// Expression base class implementation
+Expression::Expression(NodeType type, size_t line, size_t column)
+    : ASTNode(type, line, column) {}
+
+// Statement base class implementation
+Statement::Statement(NodeType type, size_t line, size_t column)
+    : ASTNode(type, line, column) {}
 
 // Program class implementation
 Program::Program(std::vector<StatementPtr> stmts) : 
-    ASTNode(ASTNodeType::PROGRAM, 0, 0), 
+    ASTNode(NodeType::PROGRAM, 0, 0), 
     statements(std::move(stmts)) {}
 
 std::string Program::toString() const {
