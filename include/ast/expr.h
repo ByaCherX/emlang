@@ -140,6 +140,131 @@ public:
 };
 
 /**
+ * @class MemberExpression
+ * @brief Represents member access operations (obj.member)
+ */
+class EMLANG_API MemberExpr : public Expression {
+public:
+    ExpressionPtr object;       // Object being accessed
+    std::string memberName;     // Name of the member
+    bool isMethodCall;          // true if this is a method call
+    
+    MemberExpr(
+        ExpressionPtr object, 
+        const std::string& memberName, 
+        bool isMethodCall = false, 
+        size_t line = 0, size_t column = 0);
+    
+    std::string toString() const override;
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @class CastExpression
+ * @brief Represents type casting operations (expr as Type or cast<Type>(expr))
+ */
+#ifdef EMLANG_FEATURE_CASTING
+class EMLANG_API CastExpr : public Expression {
+public:
+    ExpressionPtr operand;      // Expression being cast
+    std::string targetType;     // Target type name
+    bool isExplicit;            // true for explicit cast, false for implicit
+    
+    CastExpr(ExpressionPtr operand, const std::string& targetType, bool isExplicit = true, size_t line = 0, size_t column = 0);
+    
+    // Delete copy constructor and assignment operator
+    CastExpr(const CastExpr&) = delete;
+    CastExpr& operator=(const CastExpr&) = delete;
+    
+    // Enable move constructor and assignment operator
+    CastExpr(CastExpr&&) = default;
+    CastExpr& operator=(CastExpr&&) = default;
+    
+    std::string toString() const override;
+    void accept(ASTVisitor& visitor) override;
+};
+#endif // EMLANG_FEATURE_CASTING
+
+/**
+ * @class IndexExpression
+ * @brief Represents array indexing operations (arr[index])
+ */
+class EMLANG_API IndexExpr : public Expression {
+public:
+    ExpressionPtr array;        // Array expression
+    ExpressionPtr index;        // Index expression
+    
+    IndexExpr(ExpressionPtr array, ExpressionPtr index, size_t line = 0, size_t column = 0);
+
+    std::string toString() const override;
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @class ArrayExpression
+ * @brief Represents array literals ([1, 2, 3])
+ */
+class EMLANG_API ArrayExpr : public Expression {
+public:
+    std::vector<ExpressionPtr> elements;    // Array elements
+    
+    ArrayExpr(std::vector<ExpressionPtr> elements, size_t line = 0, size_t column = 0);
+    
+    // Delete copy constructor and assignment operator
+    ArrayExpr(const ArrayExpr&) = delete;
+    ArrayExpr& operator=(const ArrayExpr&) = delete;
+    
+    // Enable move constructor and assignment operator
+    ArrayExpr(ArrayExpr&&) = default;
+    ArrayExpr& operator=(ArrayExpr&&) = default;
+    
+    std::string toString() const override;
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @struct ObjectField
+ * @brief Represents a field in an object literal
+ */
+struct ObjectField {
+    std::string key;            // Field key
+    ExpressionPtr value;        // Field value
+    
+    ObjectField(const std::string& key, ExpressionPtr value) : key(key), value(std::move(value)) {}
+    
+    // Delete copy constructor and assignment operator
+    ObjectField(const ObjectField&) = delete;
+    ObjectField& operator=(const ObjectField&) = delete;
+    
+    // Enable move constructor and assignment operator
+    ObjectField(ObjectField&&) = default;
+    ObjectField& operator=(ObjectField&&) = default;
+};
+
+/**
+ * @class ObjectExpression
+ * @brief Represents object literals ({key: value})
+ */
+class EMLANG_API ObjectExpr : public Expression {
+public:
+    std::vector<ObjectField> fields;    // Object fields
+    
+    ObjectExpr(std::vector<ObjectField> fields, size_t line = 0, size_t column = 0);
+    
+    // Delete copy constructor and assignment operator
+    ObjectExpr(const ObjectExpr&) = delete;
+    ObjectExpr& operator=(const ObjectExpr&) = delete;
+    
+    // Enable move constructor and assignment operator
+    ObjectExpr(ObjectExpr&&) = default;
+    ObjectExpr& operator=(ObjectExpr&&) = default;
+    
+    std::string toString() const override;
+    void accept(ASTVisitor& visitor) override;
+};
+
+#ifdef EMLANG_FEATURE_POINTERS
+/**
  * @class DereferenceExpression
  * @brief Represents pointer dereference operations (*ptr)
  */
@@ -164,6 +289,8 @@ public:
 /**
  * @class AddressOfExpression
  * @brief Represents address-of operations (&var)
+ * 
+ * IMPORTANT: Experimental Feature
  */
 class EMLANG_API AddressOfExpr : public Expression {
 public:
@@ -182,6 +309,8 @@ public:
     std::string toString() const override;
     void accept(ASTVisitor& visitor) override;
 };
+#endif // EMLANG_FEATURE_POINTERS
+
 
 } // namespace emlang
 
