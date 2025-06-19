@@ -10,7 +10,7 @@
 [![LLVM](https://img.shields.io/badge/LLVM-17+-blue.svg)](https://llvm.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![C++](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](#prerequisites)
-[![v1.0.0](https://img.shields.io/badge/EMLang_Version-1.0.0.alpha.2-purple.svg)](version)
+[![v1.0.0](https://img.shields.io/badge/EMLang_Version-1.0.0.alpha.3-purple.svg)](version)
 
 EMLang is a statically-typed systems programming language designed for high-performance applications with ahead-of-time (AOT) compilation using LLVM. It combines modern language features with C-like performance and memory control.
 
