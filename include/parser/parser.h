@@ -21,21 +21,10 @@
 
 #pragma once
 
-// DLL Export/Import Macros for Windows
-#ifdef _WIN32
-    #ifdef EMLANG_EXPORTS
-        #define EMLANG_API __declspec(dllexport)
-    #elif defined(EMLANG_DLL)
-        #define EMLANG_API __declspec(dllimport)
-    #else
-        #define EMLANG_API
-    #endif
-#else
-    #define EMLANG_API
-#endif
-
+#include <emlang_export.h>
 #include "lexer.h"
 #include "ast.h"
+#include "parser/parser_error.h"
 #include <vector>
 #include <memory>
 
@@ -555,7 +544,7 @@ private:
      * - Parameter type (including pointer types)
      * - Optional default values (if supported)
      */
-    std::vector<FunctionDeclaration::Parameter> parseParameterList();
+    std::vector<Parameter> parseParameterList();
     
     /**
      * @brief Parses function call argument lists
@@ -590,6 +579,21 @@ private:
     std::string parseType();
     
     /**
+     * @brief Converts a Token to BinaryOpExpr::BinOp enum
+     * @param token The token to convert
+     * @return BinaryOpExpr::BinOp enum value corresponding to the token
+     * 
+     * This helper method maps TokenType values to their corresponding
+     * BinaryOpExpr::BinOp enum values for creating binary expression nodes.
+     * 
+     * Supported mappings:
+     * - Arithmetic: +, -, *, /, %
+     * - Bitwise: &, |, ^, ~, <<, >>
+     * - Comparison: ==, !=, <, <=, >, >=
+     * - Logical: &&, ||, !
+     */
+    BinaryOpExpr::BinOp tokenToBinOp(const Token& token);
+    /**
      * @brief Parses pointer type annotations
      * @return String representing the parsed pointer type
      * 
@@ -604,6 +608,174 @@ private:
      * Handles multiple levels of indirection and validates pointer syntax.
      */
     std::string parsePointerType();
+                                       
+    /**
+     * @brief Parses member access expressions (obj.member, obj.method())
+     * @return ExpressionPtr to MemberExpression AST node
+     * 
+     * Handles member access syntax:
+     * ```
+     * object.field
+     * object.method()
+     * object.field.nested
+     * ```
+     * 
+     * The method:
+     * - Parses the object expression
+     * - Handles dot notation for member access
+     * - Distinguishes between field access and method calls
+     * - Supports chained member access
+     */
+    ExpressionPtr parseMemberAccess(ExpressionPtr object);
+    
+    /**
+     * @brief Parses array/object indexing expressions (arr[index])
+     * @return ExpressionPtr to IndexExpression AST node
+     * 
+     * Handles indexing syntax:
+     * ```
+     * array[index]
+     * map[key]
+     * matrix[row][col]  // chained indexing
+     * ```
+     * 
+     * The method:
+     * - Parses the array/object expression
+     * - Parses the index expression within brackets
+     * - Supports chained indexing operations
+     * - Validates bracket matching
+     */
+    ExpressionPtr parseIndexAccess(ExpressionPtr array);
+    
+#ifdef EMLANG_FEATURE_CASTING
+    /**
+     * @brief Parses type casting expressions (expr as Type)
+     * @return ExpressionPtr to CastExpression AST node
+     * 
+     * Handles casting syntax:
+     * ```
+     * expression as TargetType
+     * value as int32
+     * pointer as void*
+     * ```
+     * 
+     * The method:
+     * - Parses the source expression
+     * - Parses the target type after 'as' keyword
+     * - Creates appropriate cast expression
+     * - Handles both safe and unsafe casts
+     */
+    ExpressionPtr parseCastExpression(ExpressionPtr operand);
+#endif // EMLANG_FEATURE_CASTING
+    
+    /**
+     * @brief Parses array literal expressions ([elem1, elem2, ...])
+     * @return ExpressionPtr to ArrayExpression AST node
+     * 
+     * Handles array literal syntax:
+     * ```
+     * []                    // empty array
+     * [1, 2, 3]            // numeric array
+     * ["a", "b", "c"]      // string array
+     * [expr1, expr2, ...]  // expression array
+     * ```
+     * 
+     * The method:
+     * - Parses opening bracket
+     * - Parses comma-separated list of expressions
+     * - Handles trailing commas (optional)
+     * - Creates ArrayExpression AST node
+     */
+    ExpressionPtr parseArrayLiteral();
+    
+    /**
+     * @brief Parses object literal expressions ({key: value, ...})
+     * @return ExpressionPtr to ObjectExpression AST node
+     * 
+     * Handles object literal syntax:
+     * ```
+     * {}                        // empty object
+     * {key: value}             // single field
+     * {key1: value1, key2: value2}  // multiple fields
+     * {name: "John", age: 30}  // mixed types
+     * ```
+     * 
+     * The method:
+     * - Parses opening brace
+     * - Parses comma-separated key-value pairs
+     * - Handles string and identifier keys
+     * - Supports trailing commas
+     * - Creates ObjectExpression AST node
+     */
+    ExpressionPtr parseObjectLiteral();
+    
+    /**
+     * @brief Parses assignment expressions with various operators
+     * @return ExpressionPtr to AssignmentExpression AST node
+     * 
+     * Handles assignment syntax:
+     * ```
+     * variable = value
+     * array[index] = value
+     * object.field = value
+     * variable += value    // compound assignment
+     * variable -= value
+     * variable *= value
+     * variable /= value
+     * ```
+     * 
+     * The method:
+     * - Parses left-hand side (lvalue)
+     * - Identifies assignment operator type
+     * - Parses right-hand side (rvalue)
+     * - Validates assignment target
+     * - Creates AssignmentExpression AST node
+     */
+    ExpressionPtr parseAssignmentExpression();
+    
+    // ======================== OPTIMIZATION HELPERS ========================
+    
+    /**
+     * @brief Optimizes constant expressions at parse time
+     * @param expr Expression to potentially optimize
+     * @return Optimized expression or original if no optimization possible
+     * 
+     * Performs compile-time constant folding:
+     * ```
+     * 2 + 3 * 4    => 14
+     * true && false => false
+     * "hello" + " world" => "hello world"
+     * ```
+     * 
+     * Early optimization reduces AST size and improves performance.
+     */
+    ExpressionPtr optimizeConstantExpression(ExpressionPtr expr);
+    
+    /**
+     * @brief Checks if an expression can be evaluated at compile time
+     * @param expr Expression to check
+     * @return true if expression is constant, false otherwise
+     * 
+     * Determines if an expression consists only of:
+     * - Literal values
+     * - Constant operations
+     * - Compile-time known values
+     */
+    bool isConstantExpression(const ExpressionPtr& expr);
+    
+    /**
+     * @brief Validates operator precedence and associativity
+     * @param leftExpr Left operand expression
+     * @param rightExpr Right operand expression  
+     * @param op Operator between expressions
+     * @return true if precedence is correct, false if parentheses needed
+     * 
+     * Helps with error reporting and suggests parentheses where
+     * operator precedence might be confusing to readers.
+     */
+    bool validateOperatorPrecedence(const ExpressionPtr& leftExpr, 
+                                   const ExpressionPtr& rightExpr, 
+                                   const std::string& op);
     
     // ======================== ERROR HANDLING METHODS ========================
     

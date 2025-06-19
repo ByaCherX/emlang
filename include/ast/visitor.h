@@ -26,12 +26,18 @@ class AssignmentExpr;
 class FunctionCallExpr;
 class DereferenceExpr;
 class AddressOfExpr;
+class MemberExpr;
+class CastExpr;
+class IndexExpr;
+class ArrayExpr;
+class ObjectExpr;
 class VariableDecl;
 class FunctionDecl;
 class ExternFunctionDecl;
 class BlockStmt;
 class IfStmt;
 class WhileStmt;
+class ForStmt;
 class ReturnStmt;
 class ExpressionStmt;
 
@@ -51,22 +57,35 @@ public:
     // Visit methods for all AST node types
     virtual void visit(Program& node) = 0;
 
+    // Expression visitors
     virtual void visit(LiteralExpr& node) = 0;
     virtual void visit(IdentifierExpr& node) = 0;
     virtual void visit(BinaryOpExpr& node) = 0;
     virtual void visit(UnaryOpExpr& node) = 0;
     virtual void visit(AssignmentExpr& node) = 0;
     virtual void visit(FunctionCallExpr& node) = 0;
+    virtual void visit(MemberExpr& node) = 0;
+#ifdef EMLANG_FEATURE_CASTING
+    virtual void visit(CastExpr& node) = 0;
+#endif
+    virtual void visit(IndexExpr& node) = 0;
+    virtual void visit(ArrayExpr& node) = 0;
+    virtual void visit(ObjectExpr& node) = 0;
+#ifdef EMLANG_FEATURE_POINTERS
     virtual void visit(DereferenceExpr& node) = 0;
     virtual void visit(AddressOfExpr& node) = 0;
+#endif
 
+    // Declaration visitors
     virtual void visit(VariableDecl& node) = 0;
     virtual void visit(FunctionDecl& node) = 0;
     virtual void visit(ExternFunctionDecl& node) = 0;
     
+    // Statement visitors
     virtual void visit(BlockStmt& node) = 0;
     virtual void visit(IfStmt& node) = 0;
     virtual void visit(WhileStmt& node) = 0;
+    virtual void visit(ForStmt& node) = 0;
     virtual void visit(ReturnStmt& node) = 0;
     virtual void visit(ExpressionStmt& node) = 0;
 };

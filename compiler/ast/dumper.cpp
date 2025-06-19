@@ -92,7 +92,7 @@ void ASTDumper::visit(IdentifierExpr& node) {
 
 void ASTDumper::visit(BinaryOpExpr& node) {
     std::cout << getIndent() << colorize(formatNodeHeader("BinaryOpExpr", node), Colors::CYAN);
-    std::cout << " " << colorize("op='" + node.operator_ + "'", Colors::YELLOW) << std::endl;
+    std::cout << " " << colorize("op='" + binOpToString(node.operator_) + "'", Colors::YELLOW) << std::endl;
     
     indent_++;
     std::cout << getIndent() << "├─left: ";
@@ -109,7 +109,7 @@ void ASTDumper::visit(BinaryOpExpr& node) {
 
 void ASTDumper::visit(UnaryOpExpr& node) {
     std::cout << getIndent() << colorize(formatNodeHeader("UnaryOpExpr", node), Colors::CYAN);
-    std::cout << " " << colorize("op='" + node.operator_ + "'", Colors::YELLOW) << std::endl;
+    std::cout << " " << colorize("op='" + binOpToString(node.operator_) + "'", Colors::YELLOW) << std::endl;
     
     indent_++;
     std::cout << getIndent() << "└─operand: ";
@@ -152,6 +152,89 @@ void ASTDumper::visit(FunctionCallExpr& node) {
     }
 }
 
+void ASTDumper::visit(MemberExpr& node) {
+    std::cout << colorize(formatNodeHeader("MemberExpr", node), Colors::CYAN) << std::endl;
+    
+    indent_++;
+    std::cout << getIndent() << "├─object: ";
+    indent_++;
+    node.object->accept(*this);
+    indent_--;
+    
+    std::cout << getIndent() << "├─member: " << colorize(node.memberName, Colors::YELLOW) << std::endl;
+    std::cout << getIndent() << "└─isMethod: " << colorize(node.isMethodCall ? "true" : "false", Colors::YELLOW) << std::endl;
+    indent_--;
+}
+
+#ifdef EMLANG_FEATURE_CASTING
+void ASTDumper::visit(CastExpr& node) {
+    std::cout << colorize(formatNodeHeader("CastExpr", node), Colors::CYAN) << std::endl;
+    
+    indent_++;
+    std::cout << getIndent() << "├─operand: ";
+    indent_++;
+    node.operand->accept(*this);
+    indent_--;
+    
+    std::cout << getIndent() << "├─targetType: " << colorize(node.targetType, Colors::YELLOW) << std::endl;
+    std::cout << getIndent() << "└─isExplicit: " << colorize(node.isExplicit ? "true" : "false", Colors::YELLOW) << std::endl;
+    indent_--;
+}
+#endif // EMLANG_FEATURE_CASTING
+
+void ASTDumper::visit(IndexExpr& node) {
+    std::cout << colorize(formatNodeHeader("IndexExpr", node), Colors::CYAN) << std::endl;
+    
+    indent_++;
+    std::cout << getIndent() << "├─array: ";
+    indent_++;
+    node.array->accept(*this);
+    indent_--;
+    
+    std::cout << getIndent() << "└─index: ";
+    indent_++;
+    node.index->accept(*this);
+    indent_--;
+    indent_--;
+}
+
+void ASTDumper::visit(ArrayExpr& node) {
+    std::cout << colorize(formatNodeHeader("ArrayExpr", node), Colors::CYAN) << std::endl;
+    
+    if (!node.elements.empty()) {
+        indent_++;
+        for (size_t i = 0; i < node.elements.size(); ++i) {
+            bool isLast = (i == node.elements.size() - 1);
+            std::cout << getIndent() << (isLast ? "└─elem" : "├─elem") << i << ": ";
+            indent_++;
+            node.elements[i]->accept(*this);
+            indent_--;
+        }
+        indent_--;
+    }
+}
+
+void ASTDumper::visit(ObjectExpr& node) {
+    std::cout << colorize(formatNodeHeader("ObjectExpr", node), Colors::CYAN) << std::endl;
+    
+    if (!node.fields.empty()) {
+        indent_++;
+        for (size_t i = 0; i < node.fields.size(); ++i) {
+            bool isLast = (i == node.fields.size() - 1);
+            std::cout << getIndent() << (isLast ? "└─field" : "├─field") << i << ": " 
+                      << colorize(node.fields[i].key, Colors::YELLOW) << std::endl;
+            indent_++;
+            std::cout << getIndent() << "└─value: ";
+            indent_++;
+            node.fields[i].value->accept(*this);
+            indent_--;
+            indent_--;
+        }
+        indent_--;
+    }
+}
+
+#ifdef EMLANG_FEATURE_POINTERS
 void ASTDumper::visit(DereferenceExpr& node) {
     std::cout << getIndent() << colorize(formatNodeHeader("DereferenceExpr", node), Colors::CYAN) << std::endl;
     
@@ -173,6 +256,7 @@ void ASTDumper::visit(AddressOfExpr& node) {
     indent_--;
     indent_--;
 }
+#endif // EMLANG_FEATURE_POINTERS
 
 // Statement visitors (purple color)
 void ASTDumper::visit(BlockStmt& node) {
@@ -230,6 +314,32 @@ void ASTDumper::visit(WhileStmt& node) {
     indent_--;
 }
 
+//! Check required this visit method for ForStmt
+void ASTDumper::visit(ForStmt& node) {
+    std::cout << getIndent() << colorize(formatNodeHeader("ForStmt", node), Colors::PURPLE) << std::endl;
+    
+    indent_++;
+    std::cout << getIndent() << "├─init: ";
+    indent_++;
+    node.initializer->accept(*this);
+    indent_--;
+    
+    std::cout << getIndent() << "├─condition: ";
+    indent_++;
+    node.condition->accept(*this);
+    indent_--;
+    
+    std::cout << getIndent() << "└─increment: ";
+    indent_++;
+    node.increment->accept(*this);
+    indent_--;
+    
+    std::cout << getIndent() << "└─body: ";
+    indent_++;
+    node.body->accept(*this);
+    indent_--;
+}
+
 void ASTDumper::visit(ReturnStmt& node) {
     std::cout << getIndent() << colorize(formatNodeHeader("ReturnStmt", node), Colors::PURPLE);
     
@@ -261,8 +371,8 @@ void ASTDumper::visit(ExpressionStmt& node) {
 void ASTDumper::visit(VariableDecl& node) {
     std::cout << getIndent() << colorize(formatNodeHeader("VarDecl", node), Colors::GREEN);
     std::cout << " " << colorize((node.isConstant ? "const " : "let ") + node.name, Colors::YELLOW);
-    if (!node.type.empty()) {
-        std::cout << " " << colorize("type='" + node.type + "'", Colors::YELLOW);
+    if (!node.type->empty()) {
+        std::cout << " " << colorize("type='" + node.type.value() + "'", Colors::YELLOW);
     }
     std::cout << std::endl;
     
@@ -279,8 +389,8 @@ void ASTDumper::visit(VariableDecl& node) {
 void ASTDumper::visit(FunctionDecl& node) {
     std::cout << getIndent() << colorize(formatNodeHeader("FunctionDecl", node), Colors::GREEN);
     std::cout << " " << colorize("name='" + node.name + "'", Colors::YELLOW);
-    if (!node.returnType.empty()) {
-        std::cout << " " << colorize("return='" + node.returnType + "'", Colors::YELLOW);
+    if (!node.returnType->empty()) {
+        std::cout << " " << colorize("return='" + node.returnType.value() + "'", Colors::YELLOW);
     }
     std::cout << std::endl;
     

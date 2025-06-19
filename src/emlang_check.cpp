@@ -19,61 +19,61 @@ private:
     }
     
 public:
-    void visit(LiteralExpression& node) override {
+    void visit(LiteralExpr& node) override {
         printIndent();
-        std::cout << "LiteralExpression: " << node.value << std::endl;
+        std::cout << "LiteralExpr: " << node.value << std::endl;
     }
     
-    void visit(IdentifierExpression& node) override {
+    void visit(IdentifierExpr& node) override {
         printIndent();
-        std::cout << "IdentifierExpression: " << node.name << std::endl;
+        std::cout << "IdentifierExpr: " << node.name << std::endl;
     }
     
-    void visit(BinaryOpExpression& node) override {
+    void visit(BinaryOpExpr& node) override {
         printIndent();
-        std::cout << "BinaryOpExpression: " << node.operator_ << std::endl;
+        std::cout << "BinaryOpExpr: " << node.operator_ << std::endl;
         indent++;
         node.left->accept(*this);
         node.right->accept(*this);
         indent--;
     }
     
-    void visit(UnaryOpExpression& node) override {
+    void visit(UnaryOpExpr& node) override {
         printIndent();
-        std::cout << "UnaryOpExpression: " << node.operator_ << std::endl;
+        std::cout << "UnaryOpExpr: " << node.operator_ << std::endl;
         indent++;
         node.operand->accept(*this);
         indent--;
     }
     
-    void visit(DereferenceExpression& node) override {
+    void visit(DereferenceExpr& node) override {
         printIndent();
-        std::cout << "DereferenceExpression: *" << std::endl;
+        std::cout << "DereferenceExpr: *" << std::endl;
         indent++;
         node.operand->accept(*this);
         indent--;
     }
     
-    void visit(AddressOfExpression& node) override {
+    void visit(AddressOfExpr& node) override {
         printIndent();
-        std::cout << "AddressOfExpression: &" << std::endl;
+        std::cout << "AddressOfExpr: &" << std::endl;
         indent++;
         node.operand->accept(*this);
         indent--;
     }
 
-    void visit(AssignmentExpression& node) override {
+    void visit(AssignmentExpr& node) override {
         printIndent();
-        std::cout << "AssignmentExpression: =" << std::endl;
+        std::cout << "AssignmentExpr: =" << std::endl;
         indent++;
         node.target->accept(*this);
         node.value->accept(*this);
         indent--;
     }
     
-    void visit(FunctionCallExpression& node) override {
+    void visit(FunctionCallExpr& node) override {
         printIndent();
-        std::cout << "FunctionCallExpression: " << node.functionName << std::endl;
+        std::cout << "FunctionCallExpr: " << node.functionName << std::endl;
         indent++;
         for (auto& arg : node.arguments) {
             arg->accept(*this);
@@ -81,9 +81,9 @@ public:
         indent--;
     }
     
-    void visit(VariableDeclaration& node) override {
+    void visit(VariableDecl& node) override {
         printIndent();
-        std::cout << "VariableDeclaration: " << (node.isConstant ? "const " : "let ") 
+        std::cout << "VariableDecl: " << (node.isConstant ? "const " : "let ") 
                   << node.name << ": " << node.type << std::endl;
         if (node.initializer) {
             indent++;
@@ -92,9 +92,9 @@ public:
         }
     }
     
-    void visit(FunctionDeclaration& node) override {
+    void visit(FunctionDecl& node) override {
         printIndent();
-        std::cout << "FunctionDeclaration: " << node.name << std::endl;
+        std::cout << "FunctionDecl: " << node.name << std::endl;
         indent++;
         for (auto& param : node.parameters) {
             printIndent();
@@ -106,9 +106,9 @@ public:
         indent--;
     }
     
-    void visit(ExternFunctionDeclaration& node) override {
+    void visit(ExternFunctionDecl& node) override {
         printIndent();
-        std::cout << "ExternFunctionDeclaration: " << node.name << std::endl;
+        std::cout << "ExternFunctionDecl: " << node.name << std::endl;
         indent++;
         for (auto& param : node.parameters) {
             printIndent();
@@ -121,9 +121,9 @@ public:
         indent--;
     }
     
-    void visit(BlockStatement& node) override {
+    void visit(BlockStmt& node) override {
         printIndent();
-        std::cout << "BlockStatement:" << std::endl;
+        std::cout << "BlockStmt:" << std::endl;
         indent++;
         for (auto& stmt : node.statements) {
             stmt->accept(*this);
@@ -131,9 +131,9 @@ public:
         indent--;
     }
     
-    void visit(IfStatement& node) override {
+    void visit(IfStmt& node) override {
         printIndent();
-        std::cout << "IfStatement:" << std::endl;
+        std::cout << "IfStmt:" << std::endl;
         indent++;
         std::cout << "Condition:" << std::endl;
         node.condition->accept(*this);
@@ -146,9 +146,9 @@ public:
         indent--;
     }
     
-    void visit(WhileStatement& node) override {
+    void visit(WhileStmt& node) override {
         printIndent();
-        std::cout << "WhileStatement:" << std::endl;
+        std::cout << "WhileStmt:" << std::endl;
         indent++;
         std::cout << "Condition:" << std::endl;
         node.condition->accept(*this);
@@ -157,9 +157,9 @@ public:
         indent--;
     }
     
-    void visit(ReturnStatement& node) override {
+    void visit(ReturnStmt& node) override {
         printIndent();
-        std::cout << "ReturnStatement:" << std::endl;
+        std::cout << "ReturnStmt:" << std::endl;
         if (node.value) {
             indent++;
             node.value->accept(*this);
@@ -167,9 +167,9 @@ public:
         }
     }
     
-    void visit(ExpressionStatement& node) override {
+    void visit(ExpressionStmt& node) override {
         printIndent();
-        std::cout << "ExpressionStatement:" << std::endl;
+        std::cout << "ExpressionStmt:" << std::endl;
         indent++;
         node.expression->accept(*this);
         indent--;
@@ -186,7 +186,7 @@ public:
 };
 
 // Token printer function
-void printTokens(const std::vector<Token>& tokens) {
+static void printTokens(const std::vector<Token>& tokens) {
     std::cout << "=== TOKENS ===" << std::endl;
     for (const auto& token : tokens) {
         std::cout << token.toString() << std::endl;
@@ -195,7 +195,7 @@ void printTokens(const std::vector<Token>& tokens) {
 }
 
 // File reading utility function
-std::string readFile(const std::string& filename) {
+static std::string readFile(const std::string& filename) {
     std::ifstream file(filename);
     if (!file.is_open()) {
         throw std::runtime_error("Could not open file: " + filename);
@@ -206,8 +206,8 @@ std::string readFile(const std::string& filename) {
     return buffer.str();
 }
 
-// Kullanım bilgilerini yazdırma
-void printUsage(const char* programName) {
+// Print usage information
+static void printUsage(const char* programName) {
     std::cout << "USAGE: " << programName << "[options] <source_file>" << std::endl;
     std::cout << "Options:" << std::endl;
     std::cout << "  --tokens               Show lexer tokens" << std::endl;
@@ -224,8 +224,8 @@ struct CheckOptions {
     bool showHelp = false;
 };
 
-// Argüman parse etme
-CheckOptions parseArguments(int argc, char* argv[]) {
+// Argument parse
+static CheckOptions parseArguments(int argc, char* argv[]) {
     CheckOptions options;
     
     for (int i = 1; i < argc; ++i) {

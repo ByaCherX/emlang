@@ -26,91 +26,100 @@ namespace emlang {
  * @brief Enumeration of all possible token types in the EMLang language
  */
 enum class TokenType {
-    // Reserved (0x00-0x0F)
-    RESERVED_BEGIN =        0x00,    // Reserved for future use
-    RESERVED_END =          0x0F,    // Reserved for future use
+    // Special (0x00-0x0F)
+    EOF_TOKEN =             0,     // End of file token
+    NEWLINE =               1,     // Newline character token
+    WHITESPACE =            2,     // Whitespace token (spaces, tabs)
+    COMMENT =               3,     // Comment token (single-line or multi-line)
+    BLOCK_COMMENT =         4,     // Block comment token (/* ... */)
+    DOC_COMMENT =           5,     // Documentation comment token (/** ... */)
 
     // Literals (0x10-0x1F)
-    NUMBER =                16,    // Numeric literal
-    STRING =                17,    // String literal
-    CHAR_LITERAL =          18,    // Character literal
-    IDENTIFIER =            19,    // Identifier (variable, function, etc.)
-    
-    // Keywords (0x20-0x3F)
-    LET =                   32,    // let variable declaration
-    CONST =                 33,    // const constant declaration
-    FUNCTION =              34,    // function declaration
-    EXTERN =                35,    // extern function declaration
-    IF =                    36,    // if conditional statement
-    ELSE =                  37,    // else conditional statement
-    WHILE =                 38,    // while loop statement
-    FOR =                   39,    // for loop statement
-    RETURN =                40,    // return statement
-    TRUE =                  41,    // true boolean literal
-    FALSE =                 42,    // false boolean literal
-    NULL_TOKEN =            43,    // null literal
+    INT =                   16,    // Integer literal
+    FLOAT =                 17,    // Floating point literal
+    CHAR =                  18,    // Character literal
+    STR =                   19,    // String literal
+    BOOL =                  20,    // Boolean literal (true/false)
+    ARRAY =                 21,    // Array literal
+    NULL_LITERAL =          22,    // Null literal
 
-    // C-style primitive type keywords (0x40-0x5F)
-    INT8 =                  64,    // int8 signed 8-bit integer
-    INT16 =                 65,    // int16 signed 16-bit integer  
-    INT32 =                 66,    // int32 signed 32-bit integer
-    INT64 =                 67,    // int64 signed 64-bit integer
-    ISIZE =                 68,    // isize pointer-sized signed integer
-    UINT8 =                 69,    // uint8 unsigned 8-bit integer
-    UINT16 =                70,    // uint16 unsigned 16-bit integer
-    UINT32 =                71,    // uint32 unsigned 32-bit integer
-    UINT64 =                72,    // uint64 unsigned 64-bit integer
-    USIZE =                 73,    // usize pointer-sized unsigned integer
-    FLOAT =                 74,    // float 32-bit floating point
-    DOUBLE =                75,    // double 64-bit floating point
-    CHAR =                  76,    // char Unicode scalar value
-    STR =                   77,    // str string slice
-    BOOL =                  78,    // bool boolean type
+    // Keywords (0x20-0x4F)
+    IDENTIFIER =            32,    // Identifier (variable, function, etc.)
+    LET =                   33,    // let variable declaration
+    CONST =                 34,    // const constant declaration
+    FUNCTION =              35,    // function declaration
+    EXTERN =                36,    // extern function declaration
+    IF =                    37,    // if conditional statement
+    ELSE =                  38,    // else conditional statement
+    WHILE =                 39,    // while loop statement
+    FOR =                   40,    // for loop statement
+    RETURN =                41,    // return statement
 
-    // Operators (0x60-0x7F)
-    PLUS =                  96,    // + addition operator
-    MINUS =                 97,    // - subtraction operator
-    MULTIPLY =              98,    // * multiplication operator
-    DIVIDE =                99,    // / division operator
-    MODULO =                100,   // % modulo operator
-    ASSIGN =                101,   // = assignment operator
-    EQUAL =                 102,   // == equality operator
-    NOT_EQUAL =             103,   // != inequality operator
-    LESS_THAN =             104,   // < relational operator
-    GREATER_THAN =          105,   // > relational operator
-    LESS_EQUAL =            106,   // <= relational operator
-    GREATER_EQUAL =         107,   // >= relational operator
-    LOGICAL_AND =           108,   // && logical conjunction
-    LOGICAL_OR =            109,   // || logical disjunction
-    LOGICAL_NOT =           110,   // ! logical negation
-    AMPERSAND =             111,   // & address-of operator
+    // Operators (0x50-0x6F)
+    PLUS =                  80,    // + addition operator
+    MINUS =                 81,    // - subtraction operator
+    MULTIPLY =              82,    // * multiplication operator
+    DIVIDE =                83,    // / division operator
+    MODULO =                84,    // % modulo operator
+    ASSIGN =                85,    // = assignment operator
+    EQUAL =                 86,    // == equality operator
+    NOT_EQUAL =             87,    // != inequality operator
+    LESS_THAN =             88,    // < relational operator
+    GREATER_THAN =          89,    // > relational operator
+    LESS_EQUAL =            90,    // <= relational operator
+    GREATER_EQUAL =         91,    // >= relational operator
+    LEFT_SHIFT =            92,    // << left shift operator
+    RIGHT_SHIFT =           93,    // >> right shift operator
+    LOGICAL_AND =           94,    // && logical conjunction
+    LOGICAL_OR =            95,    // || logical disjunction
+    LOGICAL_NOT =           96,    // ! logical negation
+    BITWISE_AND =           97,    // & bitwise AND operator
+    BITWISE_OR =            98,    // | bitwise OR operator
+    BITWISE_XOR =           99,    // ^ bitwise XOR operator
+    BITWISE_INVERT =        100,   // ~ bitwise INVERSION operator
+#ifdef EMLANG_ENABLE_POINTERS
+    AMPERSAND =             101,   // & address-of operator
+#endif
     
-    // Delimiters (0x80-0x8F)
-    SEMICOLON =             128,   // ; statement terminator
-    COMMA =                 129,   // , argument separator
-    DOT =                   130,   // . member access operator
-    COLON =                 131,   // : type annotation or label
+    // Delimiters (0x70-0x8F)
+    SEMICOLON =             112,   // ; statement terminator
+    COMMA =                 113,   // , argument separator
+    DOT =                   114,   // . member access operator
+    COLON =                 115,   // : type annotation or label
+    LEFT_PAREN =            116,   // ( left parenthesis
+    RIGHT_PAREN =           117,   // ) right parenthesis
+    LEFT_BRACE =            118,   // { left brace
+    RIGHT_BRACE =           119,   // } right brace
+    LEFT_BRACKET =          120,   // [ left bracket
+    RIGHT_BRACKET =         121,   // ] right bracket
     
-    // Brackets (0x90-0x9F)
-    LEFT_PAREN =            144,   // ( left parenthesis
-    RIGHT_PAREN =           145,   // ) right parenthesis
-    LEFT_BRACE =            146,   // { left brace
-    RIGHT_BRACE =           147,   // } right brace
-    LEFT_BRACKET =          148,   // [ left bracket
-    RIGHT_BRACKET =         149,   // ] right bracket
-    
-    // Special (0xA0-0xAF)
-    NEWLINE =               160,    // Newline character
-    EOF_TOKEN =             161,    // End of file token    
+    // Reserved (0x8F-0xFE)
+    RESERVED_START =        0x8F,   // Start of reserved range
+    RESERVED_END =          0xFE,   // End of reserved range
     
     // INVALID Token for special cases
     INVALID =               0xFF,   // Used for lexical errors and unknown characters
 };
 
 static const std::map<TokenType, std::string> tokenNames = {
-    {TokenType::NUMBER, "NUMBER"},
-    {TokenType::STRING, "STRING"},
-    {TokenType::CHAR_LITERAL, "CHAR_LITERAL"},
+    /// Special
+    {TokenType::EOF_TOKEN, "EOF"},
+    {TokenType::NEWLINE, "NEWLINE"},
+    {TokenType::WHITESPACE, "WHITESPACE"},
+    {TokenType::COMMENT, "COMMENT"},
+    {TokenType::BLOCK_COMMENT, "BLOCK_COMMENT"},
+    {TokenType::DOC_COMMENT, "DOC_COMMENT"},
+
+    /// Literals
+    {TokenType::INT, "INT"},
+    {TokenType::FLOAT, "FLOAT"},
+    {TokenType::CHAR, "CHAR"},
+    {TokenType::STR, "STR"},
+    {TokenType::BOOL, "BOOL"},
+    {TokenType::ARRAY, "ARRAY"},
+    {TokenType::NULL_LITERAL, "NULL"},
+
+    /// Keywords
     {TokenType::IDENTIFIER, "IDENTIFIER"},
     {TokenType::LET, "LET"},
     {TokenType::CONST, "CONST"},
@@ -121,27 +130,8 @@ static const std::map<TokenType, std::string> tokenNames = {
     {TokenType::WHILE, "WHILE"},
     {TokenType::FOR, "FOR"},
     {TokenType::RETURN, "RETURN"},
-    {TokenType::TRUE, "TRUE"},
-    {TokenType::FALSE, "FALSE"},
-    {TokenType::NULL_TOKEN, "NULL"},
-
-    // C-style primitive type tokens
-    {TokenType::INT8, "INT8"},
-    {TokenType::INT16, "INT16"},
-    {TokenType::INT32, "INT32"},
-    {TokenType::INT64, "INT64"},
-    {TokenType::ISIZE, "ISIZE"},
-    {TokenType::UINT8, "UINT8"},
-    {TokenType::UINT16, "UINT16"},
-    {TokenType::UINT32, "UINT32"},
-    {TokenType::UINT64, "UINT64"},
-    {TokenType::USIZE, "USIZE"},
-    {TokenType::FLOAT, "FLOAT"},
-    {TokenType::DOUBLE, "DOUBLE"},
-    {TokenType::CHAR, "CHAR"},
-    {TokenType::STR, "STR"},
-    {TokenType::BOOL, "BOOL"},
     
+    /// Operators
     {TokenType::PLUS, "PLUS"},
     {TokenType::MINUS, "MINUS"},
     {TokenType::MULTIPLY, "MULTIPLY"},
@@ -154,10 +144,20 @@ static const std::map<TokenType, std::string> tokenNames = {
     {TokenType::GREATER_THAN, "GREATER_THAN"},
     {TokenType::LESS_EQUAL, "LESS_EQUAL"},
     {TokenType::GREATER_EQUAL, "GREATER_EQUAL"},
+    {TokenType::LEFT_SHIFT, "LEFT_SHIFT"},
+    {TokenType::RIGHT_SHIFT, "RIGHT_SHIFT"},
     {TokenType::LOGICAL_AND, "LOGICAL_AND"},
     {TokenType::LOGICAL_OR, "LOGICAL_OR"},
     {TokenType::LOGICAL_NOT, "LOGICAL_NOT"},
+    {TokenType::BITWISE_AND, "BITWISE_AND"},
+    {TokenType::BITWISE_OR, "BITWISE_OR"},
+    {TokenType::BITWISE_XOR, "BITWISE_XOR"},
+    {TokenType::BITWISE_INVERT, "BITWISE_IVERT"},
+#ifdef EMLANG_ENABLE_POINTERS
     {TokenType::AMPERSAND, "AMPERSAND"},
+#endif
+
+    /// Delimiters
     {TokenType::SEMICOLON, "SEMICOLON"},
     {TokenType::COMMA, "COMMA"},
     {TokenType::DOT, "DOT"},
@@ -168,9 +168,9 @@ static const std::map<TokenType, std::string> tokenNames = {
     {TokenType::RIGHT_BRACE, "RIGHT_BRACE"},
     {TokenType::LEFT_BRACKET, "LEFT_BRACKET"},
     {TokenType::RIGHT_BRACKET, "RIGHT_BRACKET"},
-    {TokenType::NEWLINE, "NEWLINE"},
-    {TokenType::EOF_TOKEN, "EOF"},
+
     {TokenType::INVALID, "INVALID"}
+    
 };
 
 static const std::map<std::string, TokenType> keywords = {
@@ -183,25 +183,14 @@ static const std::map<std::string, TokenType> keywords = {
     {"while", TokenType::WHILE},
     {"for", TokenType::FOR},
     {"return", TokenType::RETURN},
-    {"true", TokenType::TRUE},
-    {"false", TokenType::FALSE},
-    {"null", TokenType::NULL_TOKEN},
-    // C-style primitive type keywords
-    {"int8", TokenType::INT8},
-    {"int16", TokenType::INT16},
-    {"int32", TokenType::INT32},
-    {"int64", TokenType::INT64},
-    {"isize", TokenType::ISIZE},
-    {"uint8", TokenType::UINT8},
-    {"uint16", TokenType::UINT16},
-    {"uint32", TokenType::UINT32},
-    {"uint64", TokenType::UINT64},
-    {"usize", TokenType::USIZE},
+    
+    {"int", TokenType::INT},
     {"float", TokenType::FLOAT},
-    {"double", TokenType::DOUBLE},
     {"char", TokenType::CHAR},
     {"str", TokenType::STR},
-    {"bool", TokenType::BOOL}
+    {"bool", TokenType::BOOL},
+    {"array", TokenType::ARRAY},
+    {"null", TokenType::NULL_LITERAL},
 };
 
 /**

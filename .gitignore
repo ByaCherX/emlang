@@ -18,3 +18,6 @@
 /tests/*.dll
 /tests/*.exe
 /tests/*.pdb
+
+# Vscode
+.vscode/

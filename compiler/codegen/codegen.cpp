@@ -1,507 +1,272 @@
-// LLVM Code Generator implementation
-#include "../include/codegen.h"
+//===--- codegen.cpp - Main CodeGenerator Implementation --------*- C++ -*-===//
+//
+// Part of the RNR Project, under the Apache License v2.0 with LLVM Exceptions.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+// Main code generator implementation for EMLang
+//===----------------------------------------------------------------------===//
 
-// Disable LLVM warnings
-#ifdef _MSC_VER
-    #pragma warning(push)
-    #pragma warning(disable: 4624) // destructor was implicitly deleted
-    #pragma warning(disable: 4244) // conversion warnings
-    #pragma warning(disable: 4267) // size_t conversion warnings
-#endif
+#include "codegen.h"
 
 #include <llvm/IR/Verifier.h>
+#include <llvm/IR/Constants.h>
+#include <llvm/ADT/APInt.h>
+#include <llvm/ADT/APFloat.h>
 #include <llvm/Support/raw_ostream.h>
-#include <llvm/ExecutionEngine/ExecutionEngine.h>
-#include <llvm/ExecutionEngine/GenericValue.h>
-#include <llvm/ExecutionEngine/MCJIT.h>
-#include <llvm/Support/TargetSelect.h>
-#include <llvm/Support/FileSystem.h>
-#include <llvm/MC/TargetRegistry.h>
-#include <llvm/TargetParser/Host.h>
-#include <llvm/Target/TargetMachine.h>
-#include <llvm/Target/TargetOptions.h>
-#include <llvm/IR/LegacyPassManager.h>
-#include <llvm/Transforms/Scalar.h>
-#include <llvm/Transforms/Utils.h>
-#include <llvm/Transforms/IPO.h>
-#include <llvm/Transforms/InstCombine/InstCombine.h>
-#include <llvm/Transforms/Scalar/Reassociate.h>
-#include <llvm/Transforms/Scalar/GVN.h>
-#include <llvm/Transforms/Scalar/SimplifyCFG.h>
-#include <llvm/Transforms/Utils/Mem2Reg.h>
-#include <llvm/Transforms/Scalar/TailRecursionElimination.h>
-#include <llvm/Transforms/IPO/GlobalOpt.h>
-#include <llvm/Transforms/IPO/SCCP.h>
-#include <llvm/Transforms/IPO/DeadArgumentElimination.h>
-#include <llvm/Transforms/IPO/AlwaysInliner.h>
-
-// Re-enable warnings
-#ifdef _MSC_VER
-    #pragma warning(pop)
-#endif
+#include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/Function.h>
+#include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/GlobalVariable.h>
 
 #include <iostream>
-#include <stdexcept>
 
 namespace emlang {
+namespace codegen {
+
+// ======================== CONSTRUCTION AND LIFECYCLE ========================
 
 CodeGenerator::CodeGenerator(const std::string& moduleName, OptimizationLevel optLevel) 
-    : currentFunction(nullptr), currentValue(nullptr), optimizationLevel(optLevel) {
-    // Initialize LLVM
-    context = std::make_unique<llvm::LLVMContext>();
-    module = std::make_unique<llvm::Module>(moduleName, *context);
-    builder = std::make_unique<llvm::IRBuilder<>>(*context);
+    : currentValue(nullptr) {
+    // Initialize modular components
+    contextManager = std::make_unique<LLVMContextManager>(moduleName, optLevel);
+    valueMap = std::make_unique<ValueMap>();
+    errorReporter = std::make_unique<CodegenErrorReporter>();
     
-    // Initialize native target for JIT
-    llvm::InitializeNativeTarget();
-    llvm::InitializeNativeTargetAsmPrinter();
-    llvm::InitializeNativeTargetAsmParser();
-    
-    // Register built-in functions as extern declarations
-    registerBuiltinFunctions();
+    currentFunction = nullptr;
+    currentExpressionType.clear();
 }
 
-/* ==================== LLVM Types Match ==================== */
-llvm::Type* CodeGenerator::getLLVMType(const std::string& typeName) {
-    // Legacy types for backward compatibility
-    if (typeName == "number" || typeName == "int") {
-        return llvm::Type::getInt32Ty(*context);
-    } else if (typeName == "boolean") {
-        return llvm::Type::getInt1Ty(*context);
-    } else if (typeName == "string") {
-        return llvm::PointerType::get(llvm::Type::getInt8Ty(*context), 0);
-    } else if (typeName == "void") {
-        return llvm::Type::getVoidTy(*context);
-    }
-    
-    // C-style signed integer types
-    else if (typeName == "int8") {
-        return llvm::Type::getInt8Ty(*context);
-    } else if (typeName == "int16") {
-        return llvm::Type::getInt16Ty(*context);
-    } else if (typeName == "int32") {
-        return llvm::Type::getInt32Ty(*context);
-    } else if (typeName == "int64") {
-        return llvm::Type::getInt64Ty(*context);
-    } else if (typeName == "isize") {
-        // Platform-dependent: 32-bit on 32-bit systems, 64-bit on 64-bit systems
-        return sizeof(void*) == 8 ? llvm::Type::getInt64Ty(*context) : llvm::Type::getInt32Ty(*context);
-    }
-    
-    // C-style unsigned integer types
-    else if (typeName == "uint8") {
-        return llvm::Type::getInt8Ty(*context);
-    } else if (typeName == "uint16") {
-        return llvm::Type::getInt16Ty(*context);
-    } else if (typeName == "uint32") {
-        return llvm::Type::getInt32Ty(*context);
-    } else if (typeName == "uint64") {
-        return llvm::Type::getInt64Ty(*context);
-    } else if (typeName == "usize") {
-        // Platform-dependent: 32-bit on 32-bit systems, 64-bit on 64-bit systems
-        return sizeof(void*) == 8 ? llvm::Type::getInt64Ty(*context) : llvm::Type::getInt32Ty(*context);
-    }
-    
-    // C-style floating point types
-    else if (typeName == "float") {
-        return llvm::Type::getFloatTy(*context);
-    } else if (typeName == "double") {
-        return llvm::Type::getDoubleTy(*context);
-    }
-    
-    // Other types
-    else if (typeName == "char") {
-        return llvm::Type::getInt32Ty(*context); // Unicode scalar value (U+0000 to U+10FFFF)
-    } else if (typeName == "str") {
-        return llvm::PointerType::get(llvm::Type::getInt8Ty(*context), 0);
-    } else if (typeName == "bool") {
-        return llvm::Type::getInt1Ty(*context);
-    }
-    
-    // Rust-like unit type
-    else if (typeName == "()") {
-        return llvm::Type::getVoidTy(*context);
-    }
-    
-    // Check for pointer types (C-style: int32*, char*, etc.)
-    else if (typeName.length() > 1 && typeName.back() == '*') {
-        std::string baseTypeName = typeName.substr(0, typeName.length() - 1);
-        llvm::Type* baseType = getLLVMType(baseTypeName);
-        return llvm::PointerType::get(baseType, 0);
-    }
-    
-    error("Unknown type: " + typeName);
-    return nullptr;
-}
-
-llvm::Type* CodeGenerator::getNumberType() {
-    return llvm::Type::getInt32Ty(*context);
-}
-
-llvm::Type* CodeGenerator::getStringType() {
-    return llvm::PointerType::get(llvm::Type::getInt8Ty(*context), 0);
-}
-
-llvm::Type* CodeGenerator::getBooleanType() {
-    return llvm::Type::getInt1Ty(*context);
-}
-
-llvm::Type* CodeGenerator::getPointerType(const std::string& baseTypeName) {
-    llvm::Type* baseType = getLLVMType(baseTypeName);
-    return llvm::PointerType::get(baseType, 0);
-}
-
-// C-style signed integer types
-llvm::Type* CodeGenerator::getInt8Type() {
-    return llvm::Type::getInt8Ty(*context);
-}
-
-llvm::Type* CodeGenerator::getInt16Type() {
-    return llvm::Type::getInt16Ty(*context);
-}
-
-llvm::Type* CodeGenerator::getInt32Type() {
-    return llvm::Type::getInt32Ty(*context);
-}
-
-llvm::Type* CodeGenerator::getInt64Type() {
-    return llvm::Type::getInt64Ty(*context);
-}
-
-llvm::Type* CodeGenerator::getIsizeType() {
-    // Platform-dependent pointer-sized integer
-    return sizeof(void*) == 8 ? llvm::Type::getInt64Ty(*context) : llvm::Type::getInt32Ty(*context);
-}
-
-// C-style unsigned integer types
-llvm::Type* CodeGenerator::getUint8Type() {
-    return llvm::Type::getInt8Ty(*context);
-}
-
-llvm::Type* CodeGenerator::getUint16Type() {
-    return llvm::Type::getInt16Ty(*context);
-}
-
-llvm::Type* CodeGenerator::getUint32Type() {
-    return llvm::Type::getInt32Ty(*context);
-}
-
-llvm::Type* CodeGenerator::getUint64Type() {
-    return llvm::Type::getInt64Ty(*context);
-}
-
-llvm::Type* CodeGenerator::getUsizeType() {
-    // Platform-dependent pointer-sized unsigned integer
-    return sizeof(void*) == 8 ? llvm::Type::getInt64Ty(*context) : llvm::Type::getInt32Ty(*context);
-}
-
-// C-style floating point types
-llvm::Type* CodeGenerator::getFloatType() {
-    return llvm::Type::getFloatTy(*context);
-}
-
-llvm::Type* CodeGenerator::getDoubleType() {
-    return llvm::Type::getDoubleTy(*context);
-}
-
-// Character type
-llvm::Type* CodeGenerator::getCharType() {
-    return llvm::Type::getInt32Ty(*context); // Unicode scalar value
-}
-
-// String slice type
-llvm::Type* CodeGenerator::getStrType() {
-    return llvm::PointerType::get(llvm::Type::getInt8Ty(*context), 0); // str as i8*
-}
-
-// Unit type
-llvm::Type* CodeGenerator::getUnitType() {
-    return llvm::Type::getVoidTy(*context);
-}
-
-// Helper methods for multi-level pointer support
-llvm::Type* CodeGenerator::getElementTypeFromPointer(llvm::Value* pointerValue, const std::string& sourceType) {
-    if (sourceType.empty() || sourceType.back() != '*') {
-        // Not a pointer type
-        return nullptr;
-    }
-    
-    // Remove one level of pointer indirection to get the pointed-to type
-    std::string pointeeType = sourceType.substr(0, sourceType.length() - 1);
-    
-    // Convert the pointee type to LLVM type
-    return getLLVMType(pointeeType);
-}
-
-std::string CodeGenerator::getPointeeType(const std::string& pointerType) {
-    if (pointerType.empty() || pointerType.back() != '*') {
-        return pointerType; // Not a pointer, return as-is
-    }
-    
-    // Remove one '*' from the end
-    return pointerType.substr(0, pointerType.length() - 1);
-}
-
-// END - Helper methods for multi-level pointer support
-
-// Helper methods for type checking
-bool CodeGenerator::isSignedInteger(const std::string& typeName) {
-    return typeName == "int8" || typeName == "int16" || typeName == "int32" || 
-           typeName == "int64" || typeName == "isize" || typeName == "int" || typeName == "number";
-}
-
-bool CodeGenerator::isUnsignedInteger(const std::string& typeName) {
-    return typeName == "uint8" || typeName == "uint16" || typeName == "uint32" || 
-           typeName == "uint64" || typeName == "usize";
-}
-
-bool CodeGenerator::isFloatingPoint(const std::string& typeName) {
-    return typeName == "float" || typeName == "double";
-}
-
-bool CodeGenerator::isPrimitiveType(const std::string& typeName) {
-    return isSignedInteger(typeName) || isUnsignedInteger(typeName) || 
-           isFloatingPoint(typeName) || typeName == "bool" || typeName == "boolean" ||
-           typeName == "char" || typeName == "()" || typeName == "void" || typeName == "string";
-}
-// END - LLVM Types Match
-//==============================================================
-
-llvm::Value* CodeGenerator::createEntryBlockAlloca(llvm::Function* function, const std::string& varName, llvm::Type* type) {
-    llvm::IRBuilder<> tempBuilder(&function->getEntryBlock(), function->getEntryBlock().begin());
-    return tempBuilder.CreateAlloca(type, nullptr, varName);
-}
+// ======================== PRIMARY CODE GENERATION ========================
 
 void CodeGenerator::generateIR(Program& program) {
     program.accept(*this);
     
     // Run optimization passes if requested
-    if (optimizationLevel != OptimizationLevel::None) {
-        runOptimizationPasses();
+    if (contextManager->getOptimizationLevel() != OptimizationLevel::None) {
+        contextManager->runOptimizationPasses();
     }
-}
-
-llvm::Module* CodeGenerator::getModule() const {
-    return module.get();
 }
 
 void CodeGenerator::printIR() const {
-    module->print(llvm::outs(), nullptr);
+    contextManager->printIR();
 }
 
-void CodeGenerator::writeIRToFile(const std::string& filename) const {
-    std::error_code errorCode;
-    llvm::raw_fd_ostream file(filename, errorCode);
-    if (errorCode) {
-        error("Could not open file " + filename + " for writing");
-        return;
-    }
-    module->print(file, nullptr);
-}
+// ======================== EXECUTION ========================
 
 int CodeGenerator::executeMain() {
-    // Find main function
-    llvm::Function* mainFunc = module->getFunction("main");
-    if (!mainFunc) {
-        error("No main function found");
-        return -1;
-    }
-    
-    // Create execution engine
-    std::string errorStr;
-    llvm::ExecutionEngine* executionEngine = llvm::EngineBuilder(std::unique_ptr<llvm::Module>(module.release()))
-        .setErrorStr(&errorStr)
-        .setEngineKind(llvm::EngineKind::JIT)
-        .create();
-    
-    if (!executionEngine) {
-        error("Could not create execution engine: " + errorStr);
-        return -1;
-    }
-    
-    // Execute main function
-    std::vector<llvm::GenericValue> args;
-    llvm::GenericValue result = executionEngine->runFunction(mainFunc, args);
-    
-    // Return result as integer
-    return (int)result.IntVal.getSExtValue();
+    return contextManager->executeMain();
 }
 
+void CodeGenerator::writeCodeToFile(const std::string& filename, bool emitLLVM) {
+    if (emitLLVM) {
+        contextManager->writeIRToFile(filename);
+    }
+    else {
+        contextManager->writeObjectFile(filename);
+    }
+}
+
+// ======================== ERROR HANDLING ========================
+
+bool CodeGenerator::hasErrors() const {
+    return errorReporter->hasErrors();
+}
+
+// ======================== HELPER METHODS ========================
+
+void CodeGenerator::error(const std::string& message) {
+    errorReporter->error(CodegenErrorType::InternalError, message);
+    currentValue = nullptr;
+}
+
+void CodeGenerator::error(CodegenErrorType type, const std::string& message, const std::string& context) {
+    errorReporter->error(type, message, context);
+    currentValue = nullptr;
+}
+
+// ========================================================
 // AST Visitor implementations
-void CodeGenerator::visit(LiteralExpression& node) {
+// ========================================================
+void CodeGenerator::visit(LiteralExpr& node) {
     switch (node.literalType) {
-        case LiteralExpression::LiteralType::NUMBER:
-            currentValue = llvm::ConstantInt::get(*context, llvm::APInt(32, std::stoi(node.value)));
+        case LiteralType::NUMBER:
+            // Check if the number contains a decimal point to determine if it's float or int
+            if (node.value.find('.') != std::string::npos) {
+                // It's a floating point number
+                try {
+                    double floatValue = std::stod(node.value);
+                    currentValue = llvm::ConstantFP::get(contextManager->getContext(), llvm::APFloat(floatValue));
+                    currentExpressionType = "f64";
+                } catch (const std::exception& e) {
+                    error(CodegenErrorType::TypeMismatch, "Invalid floating point number: " + node.value);
+                    return;
+                }
+            } else {
+                // It's an integer
+                try {
+                    int intValue = std::stoi(node.value);
+                    currentValue = llvm::ConstantInt::get(contextManager->getContext(), llvm::APInt(32, intValue, true));
+                    currentExpressionType = "i32";
+                } catch (const std::exception& e) {
+                    error(CodegenErrorType::TypeMismatch, "Invalid integer number: " + node.value);
+                    return;
+                }
+            }
             break;
-        case LiteralExpression::LiteralType::STRING:
-            currentValue = builder->CreateGlobalStringPtr(node.value, "str");
+        case LiteralType::STRING:
+            currentValue = contextManager->getBuilder().CreateGlobalStringPtr(node.value, "str");
+            currentExpressionType = "string";
             break;
-        case LiteralExpression::LiteralType::CHAR: {
-            // Handle character literal
+        case LiteralType::CHAR: {
             uint32_t charValue = 0;
             if (node.value.length() == 1) {
-                // Simple ASCII character
                 charValue = static_cast<uint32_t>(node.value[0]);
             } else if (node.value.substr(0, 3) == "\\u{" && node.value.back() == '}') {
-                // Unicode escape sequence \u{XXXX}
                 std::string hexCode = node.value.substr(3, node.value.length() - 4);
                 try {
                     charValue = std::stoul(hexCode, nullptr, 16);
                 } catch (const std::exception& e) {
-                    error("Invalid Unicode escape sequence: " + node.value);
-                    charValue = 0;
+                    error(CodegenErrorType::TypeMismatch, "Invalid Unicode escape sequence: " + node.value);
+                    return;
                 }            
             } else if (node.value.length() == 2 && node.value[0] == '\\') {
-                // Escape sequences
                 switch (node.value[1]) {
                     case 'n': charValue = '\n'; break;
                     case 't': charValue = '\t'; break;
                     case 'r': charValue = '\r'; break;
                     case '\\': charValue = '\\'; break;
                     case '\'': charValue = '\''; break;
-                    case '"': charValue = '"'; break;
+                    case '\"': charValue = '\"'; break;
                     case '0': charValue = '\0'; break;
                     default:
-                        error("Invalid escape sequence: " + node.value);
-                        charValue = 0;
-                        break;
+                        error(CodegenErrorType::TypeMismatch, "Invalid escape sequence: " + node.value);
+                        return;
                 }
             } else {
-                error("Invalid character literal: " + node.value);
-                charValue = 0;
+                error(CodegenErrorType::TypeMismatch, "Invalid character literal: " + node.value);
+                return;
             }
-            currentValue = llvm::ConstantInt::get(*context, llvm::APInt(32, charValue));
+            
+            currentValue = llvm::ConstantInt::get(contextManager->getContext(), llvm::APInt(32, static_cast<int>(charValue), true));
+            currentExpressionType = "char";
             break;
         }
-        case LiteralExpression::LiteralType::BOOLEAN:
-            currentValue = llvm::ConstantInt::get(*context, llvm::APInt(1, node.value == "true" ? 1 : 0));
-            break;        case LiteralExpression::LiteralType::NULL_LITERAL:
-            currentValue = llvm::Constant::getNullValue(llvm::PointerType::get(llvm::Type::getInt8Ty(*context), 0));
+        case LiteralType::BOOLEAN:
+            currentValue = llvm::ConstantInt::get(contextManager->getContext(), llvm::APInt(1, node.value == "true" ? 1 : 0, false));
+            currentExpressionType = "bool";
+            break;
+        //case LiteralType::FLOAT
+        //    currentValue = llvm::ConstantFP::get(contextManager->getContext(), llvm::APFloat(std::stod(node.value)));
+        //    currentExpressionType = "f64";
+        //    break;
+        default:
+            error(CodegenErrorType::UnknownType, "Unknown literal type");
             break;
     }
 }
 
-void CodeGenerator::visit(IdentifierExpression& node) {
-    llvm::Value* value = namedValues[node.name];
+void CodeGenerator::visit(IdentifierExpr& node) {
+    llvm::Value* value = valueMap->getVariable(node.name);
     if (!value) {
-        error("Unknown variable name: " + node.name);
+        error(CodegenErrorType::UndefinedSymbol, "Unknown variable name: " + node.name);
         return;
     }
     
-    // Set the current expression type from namedTypes for proper type tracking
-    auto typeIt = namedTypes.find(node.name);
-    if (typeIt != namedTypes.end()) {
-        currentExpressionType = typeIt->second;
-    } else {
-        currentExpressionType = "unknown";
-    }
-    
-    // Check if it's a local variable (AllocaInst) or global variable (GlobalVariable)
-    if (llvm::AllocaInst* alloca = llvm::dyn_cast<llvm::AllocaInst>(value)) {
-        // Local variable - load from alloca
-        currentValue = builder->CreateLoad(alloca->getAllocatedType(), alloca, node.name);
-    } else if (llvm::GlobalVariable* globalVar = llvm::dyn_cast<llvm::GlobalVariable>(value)) {
-        // Global variable - load from global
-        currentValue = builder->CreateLoad(globalVar->getValueType(), globalVar, node.name);
-    } else {
-        error("Invalid variable type for: " + node.name);
-    }
+    // Set the current expression type from value map for proper type tracking
+    currentExpressionType = valueMap->getVariableType(node.name);
+      // Load the value using context manager's builder with proper type
+    llvm::Type* loadType = value->getType()/*->getPointerTo()*/;
+    currentValue = contextManager->getBuilder().CreateLoad(loadType, value, node.name);
 }
 
-void CodeGenerator::visit(BinaryOpExpression& node) {
+void CodeGenerator::visit(BinaryOpExpr& node) {
     // Generate left operand
     node.left->accept(*this);
     llvm::Value* leftValue = currentValue;
+    std::string leftType = currentExpressionType;
     
-    // Generate right operand
+    // Generate right operand  
     node.right->accept(*this);
     llvm::Value* rightValue = currentValue;
+    std::string rightType = currentExpressionType;
     
     if (!leftValue || !rightValue) {
-        error("Invalid operands in binary expression");
+        error(CodegenErrorType::InternalError, "Invalid operands in binary expression");
         return;
     }
     
     // Generate appropriate instruction based on operator
+    auto& builder = contextManager->getBuilder();
+    
     if (node.operator_ == "+") {
-        currentValue = builder->CreateAdd(leftValue, rightValue, "addtmp");
+        currentValue = builder.CreateAdd(leftValue, rightValue, "addtmp");
     } else if (node.operator_ == "-") {
-        currentValue = builder->CreateSub(leftValue, rightValue, "subtmp");
+        currentValue = builder.CreateSub(leftValue, rightValue, "subtmp");
     } else if (node.operator_ == "*") {
-        currentValue = builder->CreateMul(leftValue, rightValue, "multmp");
+        currentValue = builder.CreateMul(leftValue, rightValue, "multmp");
     } else if (node.operator_ == "/") {
-        currentValue = builder->CreateSDiv(leftValue, rightValue, "divtmp");
+        currentValue = builder.CreateSDiv(leftValue, rightValue, "divtmp");
     } else if (node.operator_ == "%") {
-        currentValue = builder->CreateSRem(leftValue, rightValue, "modtmp");
+        currentValue = builder.CreateSRem(leftValue, rightValue, "modtmp");
     } else if (node.operator_ == "<") {
-        currentValue = builder->CreateICmpSLT(leftValue, rightValue, "cmptmp");
+        currentValue = builder.CreateICmpSLT(leftValue, rightValue, "cmptmp");
+        currentExpressionType = "bool";
     } else if (node.operator_ == ">") {
-        currentValue = builder->CreateICmpSGT(leftValue, rightValue, "cmptmp");
+        currentValue = builder.CreateICmpSGT(leftValue, rightValue, "cmptmp");
+        currentExpressionType = "bool";
     } else if (node.operator_ == "<=") {
-        currentValue = builder->CreateICmpSLE(leftValue, rightValue, "cmptmp");
+        currentValue = builder.CreateICmpSLE(leftValue, rightValue, "cmptmp");
+        currentExpressionType = "bool";
     } else if (node.operator_ == ">=") {
-        currentValue = builder->CreateICmpSGE(leftValue, rightValue, "cmptmp");
+        currentValue = builder.CreateICmpSGE(leftValue, rightValue, "cmptmp");
+        currentExpressionType = "bool";
     } else if (node.operator_ == "==") {
-        currentValue = builder->CreateICmpEQ(leftValue, rightValue, "cmptmp");
+        currentValue = builder.CreateICmpEQ(leftValue, rightValue, "cmptmp");
+        currentExpressionType = "bool";
     } else if (node.operator_ == "!=") {
-        currentValue = builder->CreateICmpNE(leftValue, rightValue, "cmptmp");
-    } else if (node.operator_ == "&&") {
-        currentValue = builder->CreateLogicalAnd(leftValue, rightValue, "andtmp");
-    } else if (node.operator_ == "||") {
-        currentValue = builder->CreateLogicalOr(leftValue, rightValue, "ortmp");
+        currentValue = builder.CreateICmpNE(leftValue, rightValue, "cmptmp");
+        currentExpressionType = "bool";
     } else {
-        error("Unknown binary operator: " + node.operator_);
+        error(CodegenErrorType::TypeMismatch, "Unknown binary operator: " + node.operator_);
     }
 }
 
-void CodeGenerator::visit(UnaryOpExpression& node) {
+void CodeGenerator::visit(UnaryOpExpr& node) {
     // Generate operand
     node.operand->accept(*this);
     llvm::Value* operandValue = currentValue;
     
     if (!operandValue) {
-        error("Invalid operand in unary expression");
+        error(CodegenErrorType::InternalError, "Invalid operand in unary expression");
         return;
     }
     
+    auto& builder = contextManager->getBuilder();
+    
     if (node.operator_ == "-") {
-        currentValue = builder->CreateNeg(operandValue, "negtmp");
+        currentValue = builder.CreateNeg(operandValue, "negtmp");
     } else if (node.operator_ == "!") {
-        currentValue = builder->CreateNot(operandValue, "nottmp");
+        currentValue = builder.CreateNot(operandValue, "nottmp");
+        currentExpressionType = "bool";
     } else {
-        error("Unknown unary operator: " + node.operator_);
+        error(CodegenErrorType::TypeMismatch, "Unknown unary operator: " + node.operator_);
     }
 }
 
-void CodeGenerator::visit(FunctionCallExpression& node) {
-    // Look up function in module first
-    llvm::Function* calleeF = module->getFunction(node.functionName);
-    
-    // If not found, check if it's a built-in function
-    if (!calleeF) {
-        auto funcIt = functions.find(node.functionName);
-        if (funcIt != functions.end()) {
-            calleeF = funcIt->second;
-        }
-    }
-    
-    // If still not found, try to find by link name (for built-ins)
-    if (!calleeF) {
-        auto builtins = getBuiltinFunctions();
-        auto builtinIt = builtins.find(node.functionName);
-        if (builtinIt != builtins.end()) {
-            calleeF = module->getFunction(builtinIt->second.linkName);
-        }
-    }
+void CodeGenerator::visit(FunctionCallExpr& node) {
+    // Look up function using context manager
+    llvm::Function* calleeF = contextManager->getModule()->getFunction(node.functionName);
     
     if (!calleeF) {
-        error("Unknown function referenced: " + node.functionName);
+        error(CodegenErrorType::UndefinedSymbol, "Unknown function referenced: " + node.functionName);
         return;
     }
     
     // Check argument count
     if (calleeF->arg_size() != node.arguments.size()) {
-        error("Incorrect number of arguments passed to " + node.functionName + 
+        error(CodegenErrorType::TypeMismatch, 
+              "Incorrect number of arguments passed to " + node.functionName + 
               ": expected " + std::to_string(calleeF->arg_size()) + 
               ", got " + std::to_string(node.arguments.size()));
         return;
@@ -512,22 +277,27 @@ void CodeGenerator::visit(FunctionCallExpression& node) {
     for (auto& arg : node.arguments) {
         arg->accept(*this);
         if (!currentValue) {
-            error("Invalid argument in function call");
+            error(CodegenErrorType::InternalError, "Invalid argument in function call");
             return;
         }
         argsV.push_back(currentValue);
     }
     
-    // Create call instruction, only name it if it returns a value
+    // Create call instruction using context manager's builder
+    auto& builder = contextManager->getBuilder();
     if (calleeF->getReturnType()->isVoidTy()) {
-        currentValue = builder->CreateCall(calleeF, (llvm::ArrayRef<llvm::Value*>)argsV);
+        currentValue = builder.CreateCall(calleeF, argsV);
+        currentExpressionType = "void";
     } else {
-        currentValue = builder->CreateCall(calleeF, (llvm::ArrayRef<llvm::Value*>)argsV, "calltmp");
+        currentValue = builder.CreateCall(calleeF, argsV, "calltmp");
+        // Set the expression type to a default for now - type conversion needs improvement
+        currentExpressionType = "i32"; // Fallback type
     }
 }
 
-void CodeGenerator::visit(VariableDeclaration& node) {
-    llvm::Type* llvmType = getLLVMType(node.type);
+void CodeGenerator::visit(VariableDecl& node) {
+    // Get LLVM type using value map
+    llvm::Type* llvmType = valueMap->getLLVMType(node.type, *contextManager);
     
     // Track the type for multi-level pointer support
     currentExpressionType = node.type;
@@ -542,112 +312,125 @@ void CodeGenerator::visit(VariableDeclaration& node) {
             if (auto constVal = llvm::dyn_cast<llvm::Constant>(currentValue)) {
                 initVal = constVal;
             } else {
-                error("Global variable initializer must be a constant: " + node.name);
+                error(CodegenErrorType::InternalError, 
+                      "Global variable initializer must be a constant: " + node.name);
                 return;
-            }
-        } else {
-            // Default initialization for global variables
-            if (llvmType->isDoubleTy()) {
-                initVal = llvm::ConstantFP::get(*context, llvm::APFloat(0.0));
-            } else if (llvmType->isPointerTy()) {
-                initVal = llvm::ConstantPointerNull::get(llvm::PointerType::get(builder->getInt8Ty(), 0));
+            }        } else {
+            // Default initialization for global variables - use null constants for now
+            if (llvmType->isPointerTy()) {
+                initVal = llvm::ConstantPointerNull::get(llvm::cast<llvm::PointerType>(llvmType));
+            } else if (llvmType->isIntegerTy()) {
+                initVal = llvm::ConstantInt::get(llvmType, 0);
+            } else if (llvmType->isFloatingPointTy()) {
+                initVal = llvm::ConstantFP::get(llvmType, 0.0);
             } else {
-                initVal = llvm::Constant::getNullValue(llvmType);
+                initVal = llvm::UndefValue::get(llvmType);
             }
-        }
-        
-        // Create global variable
+        }        
+        // Create global variable directly using LLVM
         auto globalVar = new llvm::GlobalVariable(
-            *module,
+            *contextManager->getModule(),
             llvmType,
-            node.isConstant,  // isConstant
-            llvm::GlobalValue::ExternalLinkage,
+            node.isConstant,
+            llvm::GlobalValue::PrivateLinkage,
             initVal,
             node.name
         );
         
-        // Remember the global variable
-        namedValues[node.name] = globalVar;
-        namedTypes[node.name] = node.type;
+        // Remember the global variable in value map
+        valueMap->addVariable(node.name, globalVar, node.type);
         currentValue = globalVar;
     } else {
         // Local variable
         llvm::Value* initVal = nullptr;
         if (node.initializer) {
             node.initializer->accept(*this);
-            initVal = currentValue;
-        } else {
-            // Default initialization for local variables
-            if (llvmType->isDoubleTy()) {
-                initVal = llvm::ConstantFP::get(*context, llvm::APFloat(0.0));
-            } else if (llvmType->isPointerTy()) {
-                initVal = llvm::ConstantPointerNull::get(llvm::PointerType::get(builder->getInt8Ty(), 0));
+            initVal = currentValue;        
+        } 
+        else {
+            // Default initialization for local variables - use null/zero constants
+            if (llvmType->isPointerTy()) {
+                initVal = llvm::ConstantPointerNull::get(llvm::cast<llvm::PointerType>(llvmType));
+            } else if (llvmType->isIntegerTy()) {
+                initVal = llvm::ConstantInt::get(llvmType, 0);
+            } else if (llvmType->isFloatingPointTy()) {
+                initVal = llvm::ConstantFP::get(llvmType, 0.0);
             } else {
-                initVal = llvm::Constant::getNullValue(llvmType);
+                initVal = llvm::UndefValue::get(llvmType);
             }
         }
         
         if (!initVal) {
-            error("Failed to generate initial value for variable: " + node.name);
+            error(CodegenErrorType::InternalError, 
+                  "Failed to generate initial value for variable: " + node.name);
             return;
         }
+          // Create alloca for the local variable - simplified approach
+        llvm::IRBuilder<> tmpBuilder(&currentFunction->getEntryBlock(), currentFunction->getEntryBlock().begin());
+        llvm::Value* alloca = tmpBuilder.CreateAlloca(llvmType, nullptr, node.name);
         
-        // Create alloca for the local variable
-        llvm::Value* alloca = createEntryBlockAlloca(currentFunction, node.name, llvmType);
+        // Store initial value using context manager's builder
+        contextManager->getBuilder().CreateStore(initVal, alloca);
         
-        // Store initial value
-        builder->CreateStore(initVal, alloca);
-        
-        // Remember the variable
-        namedValues[node.name] = alloca;
-        namedTypes[node.name] = node.type;
+        // Remember the variable in value map
+        valueMap->addVariable(node.name, alloca, node.type);
         currentValue = alloca;
     }
 }
 
-void CodeGenerator::visit(FunctionDeclaration& node) {
-    // Create function type
+void CodeGenerator::visit(FunctionDecl& node) {
+    // Create function type using value map
     std::vector<llvm::Type*> paramTypes;
     for (const auto& param : node.parameters) {
-        paramTypes.push_back(getLLVMType(param.type));
+        paramTypes.push_back(valueMap->getLLVMType(param.type, *contextManager));
     }
     
-    llvm::Type* returnType = getLLVMType(node.returnType);
+    llvm::Type* returnType = valueMap->getLLVMType(node.returnType, *contextManager);
+      // Create function type
     llvm::FunctionType* funcType = llvm::FunctionType::get(returnType, paramTypes, false);
     
     // Create function
     llvm::Function* function = llvm::Function::Create(
-        funcType, 
+        funcType,
         llvm::Function::ExternalLinkage,
         node.name,
-        module.get()
+        contextManager->getModule()
     );
     
     // Set parameter names
     unsigned idx = 0;
     for (auto& arg : function->args()) {
-        arg.setName(node.parameters[idx++].name);
+        if (idx < node.parameters.size()) {
+            arg.setName(node.parameters[idx].name);
+        }
+        idx++;
     }
-    
-    // Create basic block
-    llvm::BasicBlock* bb = llvm::BasicBlock::Create(*context, "entry", function);
-    builder->SetInsertPoint(bb);
+      // Create entry basic block
+    llvm::BasicBlock* bb = llvm::BasicBlock::Create(
+        contextManager->getContext(),
+        "entry",
+        function
+    );
+    contextManager->getBuilder().SetInsertPoint(bb);
+
     // Save previous state
-    llvm::Function* prevFunction = currentFunction;
-    std::map<std::string, llvm::Value*> prevNamedValues = namedValues;
+    llvm::Function* prevFunction = currentFunction;    
+    auto prevNamedValues = valueMap->saveScope(); // Use value map scoping
     
     currentFunction = function;
-    namedValues.clear();
     
     // Create allocas for parameters
     unsigned paramIdx = 0;
     for (auto& arg : function->args()) {
-        llvm::Value* alloca = createEntryBlockAlloca(function, std::string(arg.getName()), arg.getType());
-        builder->CreateStore(&arg, alloca);
-        namedValues[std::string(arg.getName())] = alloca;
-        // Also store the parameter type for multi-level pointer support
+        // Create alloca for parameter - simplified approach
+        llvm::IRBuilder<> tmpBuilder(&function->getEntryBlock(), function->getEntryBlock().begin());
+        llvm::Value* alloca = tmpBuilder.CreateAlloca(arg.getType(), nullptr, arg.getName());
+        
+        contextManager->getBuilder().CreateStore(&arg, alloca);
+        
+        // Store parameter in value map
         if (paramIdx < node.parameters.size()) {
-            namedTypes[std::string(arg.getName())] = node.parameters[paramIdx].type;
+            valueMap->addVariable(std::string(arg.getName()), alloca, node.parameters[paramIdx].type);
         }
         paramIdx++;
     }
@@ -655,354 +438,252 @@ void CodeGenerator::visit(FunctionDeclaration& node) {
     // Generate function body
     if (node.body) {
         node.body->accept(*this);
+        
+        // Add return if missing for void functions
+        if (returnType->isVoidTy()) {
+            contextManager->getBuilder().CreateRetVoid();
+        }
     }
     
-    // Verify function
+    // Verify function - simplified approach
     if (llvm::verifyFunction(*function, &llvm::errs())) {
-        error("Function verification failed for: " + node.name);
+        error(CodegenErrorType::InternalError, "Function verification failed for: " + node.name);
         function->eraseFromParent();
     }
     
     // Restore previous state
     currentFunction = prevFunction;
-    namedValues = prevNamedValues;
-      currentValue = function;
+    valueMap->restoreScope(prevNamedValues); // Restore scope in value map
+    currentValue = function;
 }
 
-void CodeGenerator::visit(ExternFunctionDeclaration& node) {
-    // Create function type
+void CodeGenerator::visit(ExternFunctionDecl& node) {
+    // Create function type using value map
     std::vector<llvm::Type*> paramTypes;
     for (const auto& param : node.parameters) {
-        paramTypes.push_back(getLLVMType(param.type));
+        paramTypes.push_back(valueMap->getLLVMType(param.type, *contextManager));
     }
     
-    llvm::Type* returnType = getLLVMType(node.returnType);
+    llvm::Type* returnType = valueMap->getLLVMType(node.returnType, *contextManager);
+    // Create external function type
     llvm::FunctionType* funcType = llvm::FunctionType::get(returnType, paramTypes, false);
     
-    // Create external function declaration (no body)
+    // Create external function declaration
     llvm::Function* function = llvm::Function::Create(
-        funcType, 
-        llvm::Function::ExternalLinkage,  // External linkage for library functions
+        funcType,
+        llvm::Function::ExternalLinkage,
         node.name,
-        module.get()
+        contextManager->getModule()
     );
     
     // Set parameter names for better IR readability
     unsigned idx = 0;
     for (auto& arg : function->args()) {
-        arg.setName(node.parameters[idx++].name);
+        if (idx < node.parameters.size()) {
+            arg.setName(node.parameters[idx].name);
+        }
+        idx++;
     }
-    
-    // Register function in symbol table for later calls
-    functions[node.name] = function;
     
     currentValue = function;
 }
 
-void CodeGenerator::visit(BlockStatement& node) {
+void CodeGenerator::visit(BlockStmt& node) {
+    auto prevNamedValues = valueMap->saveScope(); // Enter new scope for block
+    
     for (auto& stmt : node.statements) {
         stmt->accept(*this);
         
         // Check if we've already generated a terminator
-        if (builder->GetInsertBlock()->getTerminator()) {
+        if (contextManager->getBuilder().GetInsertBlock()->getTerminator()) {
             break; // Stop generating code after return, etc.
         }
     }
+    
+    valueMap->restoreScope(prevNamedValues); // Exit scope for block
 }
 
-void CodeGenerator::visit(IfStatement& node) {
+void CodeGenerator::visit(IfStmt& node) {
     // Generate condition
     node.condition->accept(*this);
     llvm::Value* condV = currentValue;
     if (!condV) {
-        error("Invalid condition in if statement");
+        error(CodegenErrorType::InternalError, "Invalid condition in if statement");
         return;
     }
-    
-    // Convert condition to boolean
-    if (condV->getType()->isDoubleTy()) {
-        condV = builder->CreateFCmpONE(condV, llvm::ConstantFP::get(*context, llvm::APFloat(0.0)), "ifcond");
-    } else if (condV->getType()->isIntegerTy()) {
-        condV = builder->CreateICmpNE(condV, llvm::ConstantInt::get(condV->getType(), 0), "ifcond");
+    // Convert condition to boolean - simplified approach
+    auto& builder = contextManager->getBuilder();
+    if (condV->getType() != llvm::Type::getInt1Ty(contextManager->getContext())) {
+        condV = builder.CreateICmpNE(condV, llvm::ConstantInt::get(condV->getType(), 0), "tobool");
     }
     
     // Create basic blocks
-    llvm::Function* function = builder->GetInsertBlock()->getParent();
-    llvm::BasicBlock* thenBB = llvm::BasicBlock::Create(*context, "then", function);
-    llvm::BasicBlock* elseBB = node.elseBranch ? llvm::BasicBlock::Create(*context, "else") : nullptr;
-    llvm::BasicBlock* mergeBB = llvm::BasicBlock::Create(*context, "ifcont");
+    llvm::Function* function = builder.GetInsertBlock()->getParent();
+    llvm::BasicBlock* thenBB = llvm::BasicBlock::Create(contextManager->getContext(), "then", function);
+    llvm::BasicBlock* elseBB = node.elseBranch ? llvm::BasicBlock::Create(contextManager->getContext(), "else") : nullptr;
+    llvm::BasicBlock* mergeBB = llvm::BasicBlock::Create(contextManager->getContext(), "ifcont");
     
     // Branch
     if (elseBB) {
-        builder->CreateCondBr(condV, thenBB, elseBB);
+        builder.CreateCondBr(condV, thenBB, elseBB);
     } else {
-        builder->CreateCondBr(condV, thenBB, mergeBB);
+        builder.CreateCondBr(condV, thenBB, mergeBB);
     }
     
     // Generate then block
-    builder->SetInsertPoint(thenBB);
+    builder.SetInsertPoint(thenBB);
     node.thenBranch->accept(*this);
-    if (!builder->GetInsertBlock()->getTerminator()) {
-        builder->CreateBr(mergeBB);
+    if (!builder.GetInsertBlock()->getTerminator()) {
+        builder.CreateBr(mergeBB);
     }
-    thenBB = builder->GetInsertBlock(); // Update in case of nested blocks
-      // Generate else block if present
+    thenBB = builder.GetInsertBlock(); // Update in case of nested blocks
+    
+    // Generate else block if present
     if (elseBB) {
         function->insert(function->end(), elseBB);
-        builder->SetInsertPoint(elseBB);
+        builder.SetInsertPoint(elseBB);
         node.elseBranch->accept(*this);
-        if (!builder->GetInsertBlock()->getTerminator()) {
-            builder->CreateBr(mergeBB);
+        if (!builder.GetInsertBlock()->getTerminator()) {
+            builder.CreateBr(mergeBB);
         }
-        elseBB = builder->GetInsertBlock();
+        elseBB = builder.GetInsertBlock();
     }
     
     // Generate merge block
     function->insert(function->end(), mergeBB);
-    builder->SetInsertPoint(mergeBB);
+    builder.SetInsertPoint(mergeBB);
 }
 
-void CodeGenerator::visit(WhileStatement& node) {
-    llvm::Function* function = builder->GetInsertBlock()->getParent();
+void CodeGenerator::visit(WhileStmt& node) {    
+    auto& builder = contextManager->getBuilder();
+    llvm::Function* function = builder.GetInsertBlock()->getParent();
     
     // Create basic blocks
-    llvm::BasicBlock* condBB = llvm::BasicBlock::Create(*context, "whilecond", function);
-    llvm::BasicBlock* loopBB = llvm::BasicBlock::Create(*context, "whileloop", function);
-    llvm::BasicBlock* afterBB = llvm::BasicBlock::Create(*context, "afterloop", function);
+    llvm::BasicBlock* condBB = llvm::BasicBlock::Create(contextManager->getContext(), "whilecond", function);
+    llvm::BasicBlock* loopBB = llvm::BasicBlock::Create(contextManager->getContext(), "whileloop", function);
+    llvm::BasicBlock* afterBB = llvm::BasicBlock::Create(contextManager->getContext(), "afterloop", function);
     
     // Jump to condition
-    builder->CreateBr(condBB);
+    builder.CreateBr(condBB);
     
     // Generate condition block
-    builder->SetInsertPoint(condBB);
+    builder.SetInsertPoint(condBB);
     node.condition->accept(*this);
     llvm::Value* condV = currentValue;
     if (!condV) {
-        error("Invalid condition in while statement");
+        error(CodegenErrorType::InternalError, "Invalid condition in while statement");
         return;
     }
-    
-    // Convert condition to boolean
-    if (condV->getType()->isDoubleTy()) {
-        condV = builder->CreateFCmpONE(condV, llvm::ConstantFP::get(*context, llvm::APFloat(0.0)), "whilecond");
-    } else if (condV->getType()->isIntegerTy()) {
-        condV = builder->CreateICmpNE(condV, llvm::ConstantInt::get(condV->getType(), 0), "whilecond");
+    // Convert condition to boolean - simplified approach
+    if (condV->getType() != llvm::Type::getInt1Ty(contextManager->getContext())) {
+        condV = builder.CreateICmpNE(condV, llvm::ConstantInt::get(condV->getType(), 0), "tobool");
     }
     
-    builder->CreateCondBr(condV, loopBB, afterBB);
-    
+    // Branch to loop or after
+    builder.CreateCondBr(condV, loopBB, afterBB);
     // Generate loop body
-    builder->SetInsertPoint(loopBB);
+    builder.SetInsertPoint(loopBB);
+    auto prevNamedValues = valueMap->saveScope(); // Enter scope for loop body
     node.body->accept(*this);
-    if (!builder->GetInsertBlock()->getTerminator()) {
-        builder->CreateBr(condBB);
+    valueMap->restoreScope(prevNamedValues); // Exit scope for loop body
+    
+    if (!builder.GetInsertBlock()->getTerminator()) {
+        builder.CreateBr(condBB); // Jump back to condition
     }
     
-    // Continue with after block
-    builder->SetInsertPoint(afterBB);
+    // Continue after loop
+    builder.SetInsertPoint(afterBB);
 }
 
-void CodeGenerator::visit(ReturnStatement& node) {
+void CodeGenerator::visit(ReturnStmt& node) {
+    auto& builder = contextManager->getBuilder();
+    
     if (node.value) {
         node.value->accept(*this);
-        llvm::Value* retVal = currentValue;
-        if (!retVal) {
-            error("Invalid return value");
+        if (!currentValue) {
+            error(CodegenErrorType::InternalError, "Invalid return expression");
             return;
         }
-        builder->CreateRet(retVal);
+        builder.CreateRet(currentValue);
     } else {
-        builder->CreateRetVoid();
+        builder.CreateRetVoid();
     }
 }
 
-void CodeGenerator::visit(ExpressionStatement& node) {
+void CodeGenerator::visit(ExpressionStmt& node) {
     node.expression->accept(*this);
 }
 
-void CodeGenerator::visit(Program& node) {
-    for (auto& stmt : node.statements) {
-        stmt->accept(*this);
-    }
-}
-
-void CodeGenerator::error(const std::string& message) const {
-    std::cerr << "CodeGen Error: " << message << std::endl;
-    throw std::runtime_error("Code generation error: " + message);
-}
-
-void CodeGenerator::runOptimizationPasses() {
-    // Create a legacy pass manager for function optimization
-    auto functionPassManager = std::make_unique<llvm::legacy::FunctionPassManager>(module.get());
-    auto modulePassManager = std::make_unique<llvm::legacy::PassManager>();
-    
-    // Add optimization passes based on level
-    switch (optimizationLevel) {
-        case OptimizationLevel::O1:
-            // Basic optimizations
-            functionPassManager->add(llvm::createInstructionCombiningPass());
-            functionPassManager->add(llvm::createReassociatePass());
-            functionPassManager->add(llvm::createGVNPass());
-            functionPassManager->add(llvm::createCFGSimplificationPass());
-            break;
-              case OptimizationLevel::O2:
-            // More aggressive optimizations
-            functionPassManager->add(llvm::createInstructionCombiningPass());
-            functionPassManager->add(llvm::createReassociatePass());
-            functionPassManager->add(llvm::createGVNPass());
-            functionPassManager->add(llvm::createCFGSimplificationPass());
-            functionPassManager->add(llvm::createPromoteMemoryToRegisterPass());
-            // Note: Some legacy passes may not be available in LLVM 20
-            break;
-              case OptimizationLevel::O3:
-            // Aggressive optimizations
-            functionPassManager->add(llvm::createInstructionCombiningPass());
-            functionPassManager->add(llvm::createReassociatePass());
-            functionPassManager->add(llvm::createGVNPass());
-            functionPassManager->add(llvm::createCFGSimplificationPass());
-            functionPassManager->add(llvm::createPromoteMemoryToRegisterPass());
-            functionPassManager->add(llvm::createTailCallEliminationPass());
-            modulePassManager->add(llvm::createAlwaysInlinerLegacyPass());
-            break;
-            
-        default:
-            return; // No optimization
-    }
-    
-    // Initialize and run function passes
-    functionPassManager->doInitialization();
-    for (auto& function : *module) {
-        functionPassManager->run(function);
-    }
-    functionPassManager->doFinalization();
-    
-    // Run module passes
-    modulePassManager->run(*module);
-}
-
-void CodeGenerator::writeObjectFile(const std::string& filename) const {
-    // Initialize only the native target for object file generation
-    llvm::InitializeNativeTarget();
-    llvm::InitializeNativeTargetAsmPrinter();
-    llvm::InitializeNativeTargetAsmParser();
-    
-    auto targetTriple = llvm::sys::getDefaultTargetTriple();
-    module->setTargetTriple(targetTriple);
-    
-    std::string error;
-    auto target = llvm::TargetRegistry::lookupTarget(targetTriple, error);
-    
-    if (!target) {
-        throw std::runtime_error("Failed to lookup target: " + error);
-    }
-    
-    auto cpu = "generic";
-    auto features = "";
-    llvm::TargetOptions opt;
-    std::optional<llvm::Reloc::Model> relocModel;
-    auto targetMachine = target->createTargetMachine(targetTriple, cpu, features, opt, relocModel);
-    
-    module->setDataLayout(targetMachine->createDataLayout());
-    
-    std::error_code errorCode;
-    llvm::raw_fd_ostream dest(filename, errorCode, llvm::sys::fs::OF_None);
-    
-    if (errorCode) {
-        throw std::runtime_error("Could not open file " + filename + " for writing: " + errorCode.message());
-    }
-    llvm::legacy::PassManager pass;
-    auto fileType = llvm::CodeGenFileType::ObjectFile;
-    
-    if (targetMachine->addPassesToEmitFile(pass, dest, nullptr, fileType)) {
-        throw std::runtime_error("TargetMachine can't emit a file of this type");
-    }
-    
-    pass.run(*module);
-    dest.flush();
-}
-
-void CodeGenerator::setOptimizationLevel(OptimizationLevel level) {
-    optimizationLevel = level;
-}
-
-OptimizationLevel CodeGenerator::getOptimizationLevel() const {
-    return optimizationLevel;
-}
-
-void CodeGenerator::visit(DereferenceExpression& node) {
+void CodeGenerator::visit(DereferenceExpr& node) {
     // Visit the operand to get the pointer value
     node.operand->accept(*this);
     llvm::Value* ptrValue = currentValue;
     std::string operandType = currentExpressionType;
     
     if (!ptrValue) {
-        error("Invalid pointer value for dereference");
+        error(CodegenErrorType::InternalError, "Invalid pointer value for dereference");
         return;
     }
     
-    // Determine the correct element type from the pointer type
-    llvm::Type* elementType = getElementTypeFromPointer(ptrValue, operandType);
+    // Determine the element type from the pointer type using value map
+    llvm::Type* elementType = valueMap->getElementTypeFromPointer(ptrValue, operandType, *contextManager);
     
     if (!elementType) {
         // Fallback to int32 for backward compatibility
-        elementType = llvm::Type::getInt32Ty(*context);
-        currentExpressionType = "int32";
+        elementType = llvm::Type::getInt32Ty(contextManager->getContext());
+        currentExpressionType = "i32";
     } else {
-        // Update current expression type to the pointee type
-        currentExpressionType = getPointeeType(operandType);
+        // Update current expression type to the pointee type using value map
+        currentExpressionType = valueMap->getPointeeType(operandType);
     }
     
-    // Create load instruction to dereference pointer
-    currentValue = builder->CreateLoad(elementType, ptrValue, "deref");
+    // Create load instruction to dereference pointer using context manager's builder
+    auto& builder = contextManager->getBuilder();
+    currentValue = builder.CreateLoad(elementType, ptrValue, "deref");
 }
 
-void CodeGenerator::visit(AddressOfExpression& node) {
+void CodeGenerator::visit(AddressOfExpr& node) {
     // For address-of operation, we need the address of a variable
-    if (auto identifier = dynamic_cast<IdentifierExpression*>(node.operand.get())) {
-        auto it = namedValues.find(identifier->name);
-        if (it != namedValues.end()) {
-            // namedValues stores alloca instructions (addresses)
-            currentValue = it->second;
-            
-            // Set the expression type to pointer of the variable type
-            auto typeIt = namedTypes.find(identifier->name);
-            if (typeIt != namedTypes.end()) {
-                currentExpressionType = typeIt->second + "*";
-            } else {
-                currentExpressionType = "unknown*";
-            }
+    if (auto identifier = dynamic_cast<IdentifierExpr*>(node.operand.get())) {
+        llvm::Value* value = valueMap->getVariable(identifier->name);
+        if (value) {
+            // value map stores alloca instructions (addresses)
+            currentValue = value;
+              // Set the expression type to pointer of the variable type using value map
+            std::string variableType = valueMap->getVariableType(identifier->name);
+            currentExpressionType = variableType + "*";
         } else {
-            error("Undefined variable for address-of: " + identifier->name);
+            error(CodegenErrorType::UndefinedSymbol, "Undefined variable for address-of: " + identifier->name);
             currentValue = nullptr;
         }
     } else {
-        error("Address-of operation only supported for variables");
+        error(CodegenErrorType::TypeMismatch, "Address-of operation only supported for variables");
         currentValue = nullptr;
     }
 }
 
-void CodeGenerator::visit(AssignmentExpression& node) {
+void CodeGenerator::visit(AssignmentExpr& node) {
     // First, determine where we're storing the value (target)
     // This depends on the type of target - it could be a variable name or a dereferenced pointer
     llvm::Value* targetPtr = nullptr;
     
-    if (auto* identExpr = dynamic_cast<IdentifierExpression*>(node.target.get())) {
+    if (auto* identExpr = dynamic_cast<IdentifierExpr*>(node.target.get())) {
         // Target is a simple variable
-        targetPtr = namedValues[identExpr->name];
+        targetPtr = valueMap->getVariable(identExpr->name);
         if (!targetPtr) {
-            error("Unknown variable name in assignment: " + identExpr->name);
+            error(CodegenErrorType::UndefinedSymbol, "Unknown variable name in assignment: " + identExpr->name);
             return;
         }
-    } else if (auto* derefExpr = dynamic_cast<DereferenceExpression*>(node.target.get())) {
+    } else if (auto* derefExpr = dynamic_cast<DereferenceExpr*>(node.target.get())) {
         // Target is a dereference expression (*ptr) - we need to get the pointer value
         derefExpr->operand->accept(*this);
         targetPtr = currentValue;
         if (!targetPtr) {
-            error("Invalid pointer dereference in assignment");
+            error(CodegenErrorType::InternalError, "Invalid pointer dereference in assignment");
             return;
         }
     } else {
-        error("Invalid assignment target type");
+        error(CodegenErrorType::TypeMismatch, "Invalid assignment target type");
         return;
     }
     
@@ -1010,16 +691,33 @@ void CodeGenerator::visit(AssignmentExpression& node) {
     node.value->accept(*this);
     llvm::Value* valueToStore = currentValue;
     if (!valueToStore) {
-        error("Invalid expression in assignment");
+        error(CodegenErrorType::InternalError, "Invalid expression in assignment");
         return;
     }
     
-    // Create a store instruction to assign the value
-    builder->CreateStore(valueToStore, targetPtr);
+    // Create a store instruction to assign the value using context manager's builder
+    auto& builder = contextManager->getBuilder();
+    builder.CreateStore(valueToStore, targetPtr);
     
     // The value of the assignment expression is the value assigned
     currentValue = valueToStore;
 }
 
+void CodeGenerator::visit(Program& node) {
+    // TODO: Register built-in functions - needs to be implemented
+    // BuiltinsIntegration builtins(*contextManager, *valueMap);
+    // builtins.registerBuiltinFunctions();
+    
+    // Process all statements in the program
+    for (auto& stmt : node.statements) {
+        stmt->accept(*this);
+    }
+    
+    // Verify the module - simplified approach
+    if (llvm::verifyModule(*contextManager->getModule(), &llvm::errs())) {
+        error(CodegenErrorType::InternalError, "Module verification failed");
+    }
+}
 
+} // namespace codegen
 } // namespace emlang

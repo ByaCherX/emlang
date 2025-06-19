@@ -36,6 +36,9 @@ set_target_properties(emlang_lexer PROPERTIES
 
 # Add compiler-specific flags
 if(MSVC)
+    target_compile_options(emlang_lexer PRIVATE
+        /wd4251  # DLL interface warning for STL containers
+    )
     target_compile_options(emlang_lexer PRIVATE /W4)
 else()
     target_compile_options(emlang_lexer PRIVATE -Wall -Wextra -pedantic)

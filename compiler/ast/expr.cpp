@@ -14,21 +14,18 @@
 
 namespace emlang {
 
-// Expression base class
-Expression::Expression(ASTNodeType type, size_t line, size_t column)
-    : ASTNode(type, line, column) {}
-
 // LiteralExpression
 LiteralExpr::LiteralExpr(LiteralType type, const std::string& value, size_t line, size_t column)
-    : Expression(ASTNodeType::LITERAL, line, column), literalType(type), value(value) {}
+    : Expression(NodeType::LITERAL_EXPR, line, column), literalType(type), value(value) {}
 
 std::string LiteralExpr::toString() const {
     std::string typeStr;
     switch (literalType) {
-        case LiteralType::NUMBER: typeStr = "NUMBER"; break;
-        case LiteralType::STRING: typeStr = "STRING"; break;
+        case LiteralType::INT: typeStr = "INT"; break;
+        case LiteralType::FLOAT: typeStr = "FLOAT"; break;
+        case LiteralType::STR: typeStr = "STR"; break;
         case LiteralType::CHAR: typeStr = "CHAR"; break;
-        case LiteralType::BOOLEAN: typeStr = "BOOLEAN"; break;
+        case LiteralType::BOOL: typeStr = "BOOL"; break;
         case LiteralType::NULL_LITERAL: typeStr = "NULL"; break;
     }
     return "Literal(" + typeStr + ": " + value + ")";
@@ -40,7 +37,7 @@ void LiteralExpr::accept(ASTVisitor& visitor) {
 
 // IdentifierExpression
 IdentifierExpr::IdentifierExpr(const std::string& name, size_t line, size_t column)
-    : Expression(ASTNodeType::IDENTIFIER, line, column), name(name) {}
+    : Expression(NodeType::IDENTIFIER_EXPR, line, column), name(name) {}
 
 std::string IdentifierExpr::toString() const {
     return "Identifier(" + name + ")";
@@ -51,11 +48,11 @@ void IdentifierExpr::accept(ASTVisitor& visitor) {
 }
 
 // BinaryOpExpression
-BinaryOpExpr::BinaryOpExpr(ExpressionPtr left, const std::string& op, ExpressionPtr right, size_t line, size_t column)
-    : Expression(ASTNodeType::BINARY_OP, line, column), left(std::move(left)), operator_(op), right(std::move(right)) {}
+BinaryOpExpr::BinaryOpExpr(ExpressionPtr left, const BinOp& op, ExpressionPtr right, size_t line, size_t column)
+    : Expression(NodeType::BINARY_EXPR, line, column), left(std::move(left)), operator_(op), right(std::move(right)) {}
 
 std::string BinaryOpExpr::toString() const {
-    return "BinaryOp(" + left->toString() + " " + operator_ + " " + right->toString() + ")";
+    return "BinaryOp(" + left->toString() + " " + binOpToString(operator_) + " " + right->toString() + ")";
 }
 
 void BinaryOpExpr::accept(ASTVisitor& visitor) {
@@ -63,11 +60,11 @@ void BinaryOpExpr::accept(ASTVisitor& visitor) {
 }
 
 // UnaryOpExpression
-UnaryOpExpr::UnaryOpExpr(const std::string& op, ExpressionPtr operand, size_t line, size_t column)
-    : Expression(ASTNodeType::UNARY_OP, line, column), operator_(op), operand(std::move(operand)) {}
+UnaryOpExpr::UnaryOpExpr(const BinaryOpExpr::BinOp& op, ExpressionPtr operand, size_t line, size_t column)
+    : Expression(NodeType::UNARY_EXPR, line, column), operator_(op), operand(std::move(operand)) {}
 
 std::string UnaryOpExpr::toString() const {
-    return "UnaryOp(" + operator_ + operand->toString() + ")";
+    return "UnaryOp(" + binOpToString(operator_) + operand->toString() + ")";
 }
 
 void UnaryOpExpr::accept(ASTVisitor& visitor) {
@@ -76,7 +73,7 @@ void UnaryOpExpr::accept(ASTVisitor& visitor) {
 
 // AssignmentExpression
 AssignmentExpr::AssignmentExpr(ExpressionPtr target, ExpressionPtr value, size_t line, size_t column)
-    : Expression(ASTNodeType::ASSIGNMENT, line, column), target(std::move(target)), value(std::move(value)) {}
+    : Expression(NodeType::ASSIGNMENT_EXPR, line, column), target(std::move(target)), value(std::move(value)) {}
 
 std::string AssignmentExpr::toString() const {
     return "Assignment(" + target->toString() + " = " + value->toString() + ")";
@@ -88,7 +85,7 @@ void AssignmentExpr::accept(ASTVisitor& visitor) {
 
 // FunctionCallExpression
 FunctionCallExpr::FunctionCallExpr(const std::string& name, std::vector<ExpressionPtr> args, size_t line, size_t column)
-    : Expression(ASTNodeType::FUNCTION_CALL, line, column), functionName(name), arguments(std::move(args)) {}
+    : Expression(NodeType::FUNCTION_CALL, line, column), functionName(name), arguments(std::move(args)) {}
 
 std::string FunctionCallExpr::toString() const {
     std::stringstream ss;
@@ -105,9 +102,86 @@ void FunctionCallExpr::accept(ASTVisitor& visitor) {
     visitor.visit(*this);
 }
 
+// MemberExpression
+MemberExpr::MemberExpr(ExpressionPtr object, const std::string& memberName, bool isMethodCall, size_t line, size_t column)
+    : Expression(NodeType::MEMBER_EXPR, line, column), object(std::move(object)), memberName(memberName), isMethodCall(isMethodCall) {}
+
+std::string MemberExpr::toString() const {
+    return "MemberAccess(" + object->toString() + "." + memberName + (isMethodCall ? "()" : "") + ")";
+}
+
+void MemberExpr::accept(ASTVisitor& visitor) {
+    visitor.visit(*this);
+}
+
+#ifdef EMLANG_FEATURE_CASTING
+// CastExpression
+CastExpr::CastExpr(ExpressionPtr operand, const std::string& targetType, bool isExplicit, size_t line, size_t column)
+    : Expression(NodeType::CAST_EXPR, line, column), operand(std::move(operand)), targetType(targetType), isExplicit(isExplicit) {}
+
+std::string CastExpr::toString() const {
+    return "Cast(" + operand->toString() + " as " + targetType + ")";
+}
+
+void CastExpr::accept(ASTVisitor& visitor) {
+    visitor.visit(*this);
+}
+#endif // EMLANG_FEATURE_CASTING
+
+// IndexExpression
+IndexExpr::IndexExpr(ExpressionPtr array, ExpressionPtr index, size_t line, size_t column)
+    : Expression(NodeType::INDEX_EXPR, line, column), array(std::move(array)), index(std::move(index)) {}
+
+std::string IndexExpr::toString() const {
+    return "Index(" + array->toString() + "[" + index->toString() + "])";
+}
+
+void IndexExpr::accept(ASTVisitor& visitor) {
+    visitor.visit(*this);
+}
+
+// ArrayExpression
+ArrayExpr::ArrayExpr(std::vector<ExpressionPtr> elements, size_t line, size_t column)
+    : Expression(NodeType::ARRAY_EXPR, line, column), elements(std::move(elements)) {}
+
+std::string ArrayExpr::toString() const {
+    std::stringstream ss;
+    ss << "Array([";
+    for (size_t i = 0; i < elements.size(); ++i) {
+        if (i > 0) ss << ", ";
+        ss << elements[i]->toString();
+    }
+    ss << "])";
+    return ss.str();
+}
+
+void ArrayExpr::accept(ASTVisitor& visitor) {
+    visitor.visit(*this);
+}
+
+// ObjectExpression
+ObjectExpr::ObjectExpr(std::vector<ObjectField> fields, size_t line, size_t column)
+    : Expression(NodeType::OBJECT_EXPR, line, column), fields(std::move(fields)) {}
+
+std::string ObjectExpr::toString() const {
+    std::stringstream ss;
+    ss << "Object({";
+    for (size_t i = 0; i < fields.size(); ++i) {
+        if (i > 0) ss << ", ";
+        ss << fields[i].key << ": " << fields[i].value->toString();
+    }
+    ss << "})";
+    return ss.str();
+}
+
+void ObjectExpr::accept(ASTVisitor& visitor) {
+    visitor.visit(*this);
+}
+
+#ifdef EMLANG_FEATURE_POINTERS
 // DereferenceExpression
 DereferenceExpr::DereferenceExpr(ExpressionPtr operand, size_t line, size_t column)
-    : Expression(ASTNodeType::DEREFERENCE, line, column), operand(std::move(operand)) {}
+    : Expression(NodeType::DEREFERENCE, line, column), operand(std::move(operand)) {}
 
 std::string DereferenceExpr::toString() const {
     return "Dereference(*" + operand->toString() + ")";
@@ -119,7 +193,7 @@ void DereferenceExpr::accept(ASTVisitor& visitor) {
 
 // AddressOfExpression
 AddressOfExpr::AddressOfExpr(ExpressionPtr operand, size_t line, size_t column)
-    : Expression(ASTNodeType::ADDRESS_OF, line, column), operand(std::move(operand)) {}
+    : Expression(NodeType::ADDRESS_OF, line, column), operand(std::move(operand)) {}
 
 std::string AddressOfExpr::toString() const {
     return "AddressOf(&" + operand->toString() + ")";
@@ -128,5 +202,6 @@ std::string AddressOfExpr::toString() const {
 void AddressOfExpr::accept(ASTVisitor& visitor) {
     visitor.visit(*this);
 }
+#endif // EMLANG_FEATURE_POINTERS
 
 } // namespace emlang
