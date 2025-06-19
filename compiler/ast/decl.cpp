@@ -22,7 +22,7 @@ VariableDecl::VariableDecl(
     bool isConst, 
     size_t line, 
     size_t column
-) : Statement(ASTNodeType::VARIABLE_DECLARATION, line, column), 
+) : Statement(NodeType::VARIABLE_DECL, line, column), 
     name(name), 
     type(type), 
     initializer(std::move(init)), 
@@ -30,8 +30,8 @@ VariableDecl::VariableDecl(
 
 std::string VariableDecl::toString() const {
     std::string result = (isConstant ? "const " : "let ") + name;
-    if (!type.empty()) {
-        result += ": " + type;
+    if (type.has_value() && !type->empty()) {
+        result += ": " + type.value();
     }
     if (initializer) {
         result += " = " + initializer->toString();
@@ -49,13 +49,19 @@ FunctionDecl::FunctionDecl(
     std::vector<Parameter> params, 
     const std::string& retType, 
     StatementPtr body, 
+    bool Extern,
+    bool Async,
+    bool Unsafe,
     size_t line, 
     size_t column
-) : Statement(ASTNodeType::FUNCTION_DECLARATION, line, column), 
+) : Statement(NodeType::FUNCTION_DECL, line, column), 
     name(name), 
     parameters(std::move(params)), 
     returnType(retType), 
-    body(std::move(body)) {}
+    body(std::move(body)),
+    isExtern(Extern),
+    isAsync(Async),
+    isUnsafe(Unsafe) {}
 
 std::string FunctionDecl::toString() const {
     std::stringstream ss;
@@ -65,8 +71,8 @@ std::string FunctionDecl::toString() const {
         ss << parameters[i].name << ": " << parameters[i].type;
     }
     ss << ")";
-    if (!returnType.empty()) {
-        ss << ": " << returnType;
+    if (!returnType->empty()) {
+        ss << ": " << returnType.value();
     }
     ss << " " << body->toString() << ")";
     return ss.str();
@@ -83,7 +89,7 @@ ExternFunctionDecl::ExternFunctionDecl(
     const std::string& retType, 
     size_t line, 
     size_t column
-) : Statement(ASTNodeType::EXTERN_FUNCTION_DECLARATION, line, column), 
+) : Statement(NodeType::EXTERN_FN_DECL, line, column), 
     name(name), 
     parameters(std::move(params)), 
     returnType(retType) {}
