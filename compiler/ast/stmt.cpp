@@ -16,7 +16,7 @@ namespace emlang {
 
 // BlockStatement
 BlockStmt::BlockStmt(std::vector<StatementPtr> stmts, size_t line, size_t column)
-    : Statement(ASTNodeType::BLOCK_STATEMENT, line, column), statements(std::move(stmts)) {}
+    : Statement(NodeType::BLOCK_STMT, line, column), statements(std::move(stmts)) {}
 
 std::string BlockStmt::toString() const {
     std::stringstream ss;
@@ -35,7 +35,7 @@ void BlockStmt::accept(ASTVisitor& visitor) {
 
 // IfStatement
 IfStmt::IfStmt(ExpressionPtr cond, StatementPtr then, StatementPtr else_, size_t line, size_t column)
-    : Statement(ASTNodeType::IF_STATEMENT, line, column), 
+    : Statement(NodeType::IF_STMT, line, column), 
       condition(std::move(cond)), 
       thenBranch(std::move(then)), 
       elseBranch(std::move(else_)) {}
@@ -55,7 +55,7 @@ void IfStmt::accept(ASTVisitor& visitor) {
 
 // WhileStatement
 WhileStmt::WhileStmt(ExpressionPtr cond, StatementPtr body, size_t line, size_t column)
-    : Statement(ASTNodeType::WHILE_STATEMENT, line, column), 
+    : Statement(NodeType::WHILE_STMT, line, column), 
       condition(std::move(cond)), 
       body(std::move(body)) {}
 
@@ -69,7 +69,7 @@ void WhileStmt::accept(ASTVisitor& visitor) {
 
 // ReturnStatement
 ReturnStmt::ReturnStmt(ExpressionPtr val, size_t line, size_t column)
-    : Statement(ASTNodeType::RETURN_STATEMENT, line, column), value(std::move(val)) {}
+    : Statement(NodeType::RETURN_STMT, line, column), value(std::move(val)) {}
 
 std::string ReturnStmt::toString() const {
     if (value) {
@@ -84,13 +84,36 @@ void ReturnStmt::accept(ASTVisitor& visitor) {
 
 // ExpressionStatement
 ExpressionStmt::ExpressionStmt(ExpressionPtr expr, size_t line, size_t column)
-    : Statement(ASTNodeType::EXPRESSION_STMT, line, column), expression(std::move(expr)) {}
+    : Statement(NodeType::EXPRESSION_STMT, line, column), expression(std::move(expr)) {}
 
 std::string ExpressionStmt::toString() const {
     return "ExprStmt(" + expression->toString() + ")";
 }
 
 void ExpressionStmt::accept(ASTVisitor& visitor) {
+    visitor.visit(*this);
+}
+
+// ForStatement
+ForStmt::ForStmt(StatementPtr init, ExpressionPtr cond, ExpressionPtr incr, StatementPtr body, size_t line, size_t column)
+    : Statement(NodeType::FOR_STMT, line, column), 
+      initializer(std::move(init)), 
+      condition(std::move(cond)), 
+      increment(std::move(incr)), 
+      body(std::move(body)) {}
+
+std::string ForStmt::toString() const {
+    std::string result = "For(";
+    if (initializer) result += initializer->toString();
+    result += "; ";
+    if (condition) result += condition->toString();
+    result += "; ";
+    if (increment) result += increment->toString();
+    result += "; " + body->toString() + ")";
+    return result;
+}
+
+void ForStmt::accept(ASTVisitor& visitor) {
     visitor.visit(*this);
 }
 
