@@ -52,92 +52,64 @@ emlang/
 
 ## ✨ Language Features
 
-#### ✅ **Primitive Types**
-```emlang
-// Integer types with explicit sizing
-let byte: int8 = 127;
-let short: int16 = 32767;
-let normal: int32 = 2147483647;
-let large: int64 = 9223372036854775807;
+### **Primitive Types**
 
-// Unsigned variants
-let ubyte: uint8 = 255;
-let ushort: uint16 = 65535;
-let uint: uint32 = 4294967295;
-let ulong: uint64 = 18446744073709551615;
+| Type     | Size   | Description      | Min Value | Max Value |
+|----------|--------|------------------|-----------|-----------|
+| `int8`   | 8-bit  | Signed integer   | -128 | 127 |
+| `int16`  | 16-bit | Signed integer   | -32,768 | 32,767 |
+| `int32`  | 32-bit | Signed integer   | -2,147,483,648 | 2,147,483,647 |
+| `int64`  | 64-bit | Signed integer   | -9,223,372,036,854,775,808 | 9,223,372,036,854,775,807 |
+| `uint8`  | 8-bit  | Unsigned integer | 0 | 255 |
+| `uint16` | 16-bit | Unsigned integer | 0 | 65,535 |
+| `uint32` | 32-bit | Unsigned integer | 0 | 4,294,967,295 |
+| `uint64` | 64-bit | Unsigned integer | 0 | 18,446,744,073,709,551,615 |
+| `float`  | 32-bit | Floating point   | ~-3.4e38 | ~3.4e38 |
+| `double` | 64-bit | Double precision | ~-1.8e308 | ~1.8e308 |
+| `bool`   | 1-bit  | Boolean          | `false` | `true` |
+| `char`   | 8-bit  | Character        | 0 | 255 |
 
-// Floating point precision
-let precision: float = 3.14159;
-let highPrecision: double = 2.718281828459045;
+### **Unicode and String Support**
 
-// Boolean and character types
-let flag: bool = true;
-let character: char = 'A';
-```
+| Feature                | Description | Examples |
+|------------------------|-------------|----------|
+| **Unicode Characters** | Full UTF-8 character support | `'😀'`, `'π'`, `'€'` |
+| **Escape Sequences**   | Standard C-style escapes | `'\n'`, `'\t'`, `'\\'`, `'\"'` |
+| **Unicode Escapes**    | Unicode code point notation | `'\u{03C0}'` (π), `'\u{20AC}'` (€) |
+| **String Literals**    | UTF-8 string support | `"Hello, World!"` |
+| **Path Strings**       | Windows/Unix path support | `"C:\\Users\\Name"` |
+| **Mixed Content**      | Unicode in strings | `"Càf Manü ★ ♠ ♥"` |
 
-#### ✅ **Unicode and String Support**
-```emlang
-// Unicode character literals
-let emoji: char = '😀';
-let greek: char = '\u{03C0}';  // π
-let euro: char = '\u{20AC}';   // €
+### **C-Style Pointer System**
 
-// String literals with escape sequences
-let message: str = "Hello, World!\n";
-let path: str = "C:\\Users\\Name\\Documents";
-let unicode: str = "Café Münü with symbols: ★ ♠ ♥";
-```
+| Feature | Operator | Description | Usage |
+|---------|----------|-------------|-------|
+| **Address-of** | `&` | Gets memory address | `&variable` |
+| **Dereference** | `*` | Accesses value at address | `*pointer` |
+| **Pointer Declaration** | `*` | Declares pointer type | `int32*` |
+| **Multi-level Pointers** | `**` | Pointer to pointer | `int32**` |
+| **Null Pointer** | `null` | Null pointer value | `ptr = null` |
 
-#### ✅ **C-Style Pointer System**
-```emlang
-function pointerDemo(): int32 {
-    let value: int32 = 42;
-    let ptr: int32* = &value;        // Address-of operator
-    let deref: int32 = *ptr;         // Dereference operator
-    
-    // Multi-level pointers
-    let ptrToPtr: int32** = &ptr;
-    let final: int32 = **ptrToPtr;
-    
-    return final;
-}
-```
+### **Function Declarations**
 
-#### ✅ **Function Declarations**
-```emlang
-function fibonacci(n: int32): int32 {
-    if (n <= 1) {
-        return n;
-    }
-    return fibonacci(n-1) + fibonacci(n-2);
-}
+| Feature | Syntax | Description | Example |
+|---------|--------|-------------|---------|
+| **Function Definition** | `function name(): type` | Regular function | `function add(a: int32, b: int32): int32` |
+| **External Functions** | `extern function` | External C functions | `extern function printf(format: str): int32` |
+| **Void Functions** | `: void` | No return value | `function print(): void` |
+| **Parameters** | `name: type` | Typed parameters | `(x: int32, y: float)` |
+| **Return Statement** | `return value` | Function return | `return x + y` |
 
-// External function declarations
-extern function printf(format: str): int32;
-```
+### **Control Flow**
 
-#### ✅ **Control Flow**
-```emlang
-function controlFlow(): void {
-    let x: int32 = 10;
-    
-    // Conditional statements
-    if (x > 5) {
-        // True branch
-    } else {
-        // False branch
-    }
-    
-    // Loop constructs
-    while (x > 0) {
-        x = x - 1;
-    }
-    
-    for (let i: int32 = 0; i < 10; i = i + 1) {
-        // Loop body
-    }
-}
-```
+| Structure | Syntax | Description | Features |
+|-----------|--------|-------------|----------|
+| **If Statement** | `if (condition) { }` | Conditional execution | With optional `else` |
+| **While Loop** | `while (condition) { }` | Pre-condition loop | Condition checked first |
+| **For Loop** | `for (init; condition; update)` | Counting loop | C-style syntax |
+| **Block Scope** | `{ ... }` | Code blocks | Local variable scope |
+| **Nested Structures** | - | All structures nestable | Unlimited nesting depth |
+
 
 ## 🏗️ Architecture & Implementation
 

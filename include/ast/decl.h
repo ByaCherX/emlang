@@ -14,6 +14,7 @@
 
 #include "ast_base.h"
 #include "visitor.h"
+#include <optional>
 
 namespace emlang {
 
@@ -23,12 +24,17 @@ namespace emlang {
  */
 class EMLANG_API VariableDecl : public Statement {
 public:
-    std::string name;           // Variable name
-    std::string type;           // Variable type (optional)
-    ExpressionPtr initializer;  // Optional initializer expression
-    bool isConstant;            // true for const, false for let
+    std::string name;                // Variable name
+    std::optional<std::string> type; // Variable type (optional)
+    ExpressionPtr initializer;       // Optional initializer expression
+    bool isConstant;                 // true for const, false for let
     
-    VariableDecl(const std::string& name, const std::string& type, ExpressionPtr init = nullptr, bool isConst = false, size_t line = 0, size_t column = 0);
+    VariableDecl(
+        const std::string& name, 
+        const std::string& type, 
+        ExpressionPtr init = nullptr, 
+        bool isConst = false, 
+        size_t line = 0, size_t column = 0);
     
     // Delete copy constructor and assignment operator
     VariableDecl(const VariableDecl&) = delete;
@@ -45,15 +51,28 @@ public:
 /**
  * @class FunctionDeclaration
  * @brief Represents function declarations
+ * IMPLEMENT: FunctionDecl -> FnDecl, combine with extern function decl
  */
 class EMLANG_API FunctionDecl : public Statement {
 public:
-    std::string name;                   // Function name
-    std::vector<Parameter> parameters;  // Function parameters
-    std::string returnType;             // Return type (optional)
-    StatementPtr body;                  // Function body
+    std::string name;                      // Function name
+    std::vector<Parameter> parameters;     // Function parameters
+    std::optional<std::string> returnType; // Return type (optional)
+    StatementPtr body;                     // Function body
+    bool isExtern;                         // true if this is an extern function declaration
+    bool isAsync;                          // true if this is an async function declaration
+    bool isUnsafe;                         // true if this is an unsafe function declaration
+    std::optional<std::string> abi;        // ABI name for the function (optional)
     
-    FunctionDecl(const std::string& name, std::vector<Parameter> params, const std::string& retType, StatementPtr body, size_t line = 0, size_t column = 0);
+    FunctionDecl(
+        const std::string& name, 
+        std::vector<Parameter> params, 
+        const std::string& retType, 
+        StatementPtr body, 
+        bool isExtern = false, 
+        bool isAsync = false, 
+        bool isUnsafe = false, 
+        size_t line = 0, size_t column = 0);
     
     // Delete copy constructor and assignment operator
     FunctionDecl(const FunctionDecl&) = delete;

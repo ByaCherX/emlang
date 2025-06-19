@@ -87,6 +87,31 @@ public:
 };
 
 /**
+ * @class ForStatement
+ * @brief Represents for loop statements
+ */
+class EMLANG_API ForStmt : public Statement {
+public:
+    StatementPtr initializer;   // Loop initialization (optional)
+    ExpressionPtr condition;    // Loop condition (optional)
+    ExpressionPtr increment;    // Loop increment (optional)
+    StatementPtr body;          // Loop body
+    
+    ForStmt(StatementPtr init, ExpressionPtr cond, ExpressionPtr incr, StatementPtr body, size_t line = 0, size_t column = 0);
+    
+    // Delete copy constructor and assignment operator
+    ForStmt(const ForStmt&) = delete;
+    ForStmt& operator=(const ForStmt&) = delete;
+    
+    // Enable move constructor and assignment operator
+    ForStmt(ForStmt&&) = default;
+    ForStmt& operator=(ForStmt&&) = default;
+    
+    std::string toString() const override;
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
  * @class ReturnStatement
  * @brief Represents return statements
  */
