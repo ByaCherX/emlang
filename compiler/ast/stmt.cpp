@@ -14,10 +14,6 @@
 
 namespace emlang {
 
-// Statement base class
-Statement::Statement(ASTNodeType type, size_t line, size_t column)
-    : ASTNode(type, line, column) {}
-
 // BlockStatement
 BlockStmt::BlockStmt(std::vector<StatementPtr> stmts, size_t line, size_t column)
     : Statement(ASTNodeType::BLOCK_STATEMENT, line, column), statements(std::move(stmts)) {}

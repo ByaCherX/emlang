@@ -14,10 +14,6 @@
 
 namespace emlang {
 
-// Expression base class
-Expression::Expression(ASTNodeType type, size_t line, size_t column)
-    : ASTNode(type, line, column) {}
-
 // LiteralExpression
 LiteralExpr::LiteralExpr(LiteralType type, const std::string& value, size_t line, size_t column)
     : Expression(ASTNodeType::LITERAL, line, column), literalType(type), value(value) {}
