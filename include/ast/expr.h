@@ -52,19 +52,17 @@ public:
  */
 class EMLANG_API BinaryOpExpr : public Expression {
 public:
-    ExpressionPtr left;         // Left operand
-    std::string operator_;      // Operator symbol
-    ExpressionPtr right;        // Right operand
+    enum class BinOp {
+        ADD, SUB, MUL, DIV, MOD,
+        AND, OR, XOR, INV, SHL, SHR,
+        EQ, NE, LT, LE, GT, GE,
+        LAND, LOR, LNOT,
+    };
+    ExpressionPtr left;     // Left operand
+    BinOp operator_;        // Operator symbol
+    ExpressionPtr right;    // Right operand
     
-    BinaryOpExpr(ExpressionPtr left, const std::string& op, ExpressionPtr right, size_t line = 0, size_t column = 0);
-    
-    // Delete copy constructor and assignment operator
-    BinaryOpExpr(const BinaryOpExpr&) = delete;
-    BinaryOpExpr& operator=(const BinaryOpExpr&) = delete;
-    
-    // Enable move constructor and assignment operator
-    BinaryOpExpr(BinaryOpExpr&&) = default;
-    BinaryOpExpr& operator=(BinaryOpExpr&&) = default;
+    BinaryOpExpr(ExpressionPtr left, const BinOp& op, ExpressionPtr right, size_t line = 0, size_t column = 0);
     
     std::string toString() const override;
     void accept(ASTVisitor& visitor) override;
@@ -76,18 +74,10 @@ public:
  */
 class EMLANG_API UnaryOpExpr : public Expression {
 public:
-    std::string operator_;      // Operator symbol
-    ExpressionPtr operand;      // Operand expression
+    BinaryOpExpr::BinOp operator_;  // Operator symbol
+    ExpressionPtr operand;          // Operand expression
     
-    UnaryOpExpr(const std::string& op, ExpressionPtr operand, size_t line = 0, size_t column = 0);
-    
-    // Delete copy constructor and assignment operator
-    UnaryOpExpr(const UnaryOpExpr&) = delete;
-    UnaryOpExpr& operator=(const UnaryOpExpr&) = delete;
-    
-    // Enable move constructor and assignment operator
-    UnaryOpExpr(UnaryOpExpr&&) = default;
-    UnaryOpExpr& operator=(UnaryOpExpr&&) = default;
+    UnaryOpExpr(const BinaryOpExpr::BinOp& op, ExpressionPtr operand, size_t line = 0, size_t column = 0);
     
     std::string toString() const override;
     void accept(ASTVisitor& visitor) override;
@@ -104,14 +94,6 @@ public:
     
     AssignmentExpr(ExpressionPtr target, ExpressionPtr value, size_t line = 0, size_t column = 0);
     
-    // Delete copy constructor and assignment operator
-    AssignmentExpr(const AssignmentExpr&) = delete;
-    AssignmentExpr& operator=(const AssignmentExpr&) = delete;
-    
-    // Enable move constructor and assignment operator
-    AssignmentExpr(AssignmentExpr&&) = default;
-    AssignmentExpr& operator=(AssignmentExpr&&) = default;
-    
     std::string toString() const override;
     void accept(ASTVisitor& visitor) override;
 };
@@ -119,11 +101,14 @@ public:
 /**
  * @class FunctionCallExpression
  * @brief Represents function call expressions
+ * IMPLEMENT: FunctionCallExpr -> CallExpr
  */
 class EMLANG_API FunctionCallExpr : public Expression {
 public:
+    //ExpressionPtr callee;                 // The function being called
     std::string functionName;               // Name of the function being called
     std::vector<ExpressionPtr> arguments;   // Function arguments
+    //std::vector<> generic_args;           // Generic arguments (if any)
     
     FunctionCallExpr(const std::string& name, std::vector<ExpressionPtr> args, size_t line = 0, size_t column = 0);
     
@@ -311,6 +296,35 @@ public:
 };
 #endif // EMLANG_FEATURE_POINTERS
 
+/****************************************
+* Helper functions for expression creation
+****************************************/
+/* BinOp to string method */
+std::string binOpToString(BinaryOpExpr::BinOp op) {
+    switch (op) {
+        case BinaryOpExpr::BinOp::ADD: return "+";
+        case BinaryOpExpr::BinOp::SUB: return "-";
+        case BinaryOpExpr::BinOp::MUL: return "*";
+        case BinaryOpExpr::BinOp::DIV: return "/";
+        case BinaryOpExpr::BinOp::MOD: return "%";
+        case BinaryOpExpr::BinOp::AND: return "&";
+        case BinaryOpExpr::BinOp::OR: return "|";
+        case BinaryOpExpr::BinOp::XOR: return "^";
+        case BinaryOpExpr::BinOp::INV: return "~";
+        case BinaryOpExpr::BinOp::SHL: return "<<";
+        case BinaryOpExpr::BinOp::SHR: return ">>";
+        case BinaryOpExpr::BinOp::EQ: return "==";
+        case BinaryOpExpr::BinOp::NE: return "!=";
+        case BinaryOpExpr::BinOp::LT: return "<";
+        case BinaryOpExpr::BinOp::LE: return "<=";
+        case BinaryOpExpr::BinOp::GT: return ">";
+        case BinaryOpExpr::BinOp::GE: return ">=";
+        case BinaryOpExpr::BinOp::LAND: return "&&";
+        case BinaryOpExpr::BinOp::LOR: return "||";
+        case BinaryOpExpr::BinOp::LNOT: return "!";
+    }
+    return "";
+}
 
 } // namespace emlang
 
