@@ -6,9 +6,9 @@
 #define EMLANG_H
 
 /*------   Version   ------*/
-#define EMLANG_VERSION_MAJOR    0
-#define EMLANG_VERSION_MINOR    9
-#define EMLANG_VERSION_PATCH    26
+#define EMLANG_VERSION_MAJOR    1
+#define EMLANG_VERSION_MINOR    0
+#define EMLANG_VERSION_PATCH    0
 #define EMLANG_VERSION_NUMBER  (EMLANG_VERSION_MAJOR *100*100 + EMLANG_VERSION_MINOR *100 + EMLANG_VERSION_PATCH)
 #define EMLANG_VERSION_STRING   EMLANG_VERSION_MAJOR "." \
                                 EMLANG_VERSION_MINOR "." \
@@ -29,10 +29,10 @@
 /***************************************
 *  Feature flags
 ***************************************/
-#define EMLANG_FEATURE_EXTERN_FUNCTIONS  0
 #define EMLANG_FEATURE_POINTERS          0
-#define EMLANG_FEATURE_STRINGS           0
-#define EMLANG_FEATURE_ARRAYS            0
+#define EMLANG_FEATURE_CASTING           0
+#define EMLANG_FEATURE_IMPORTS           0
+#define EMLANG_FEATURE_EXTERN_FUNCTIONS  0
 
 
 #endif // EMLANG_H

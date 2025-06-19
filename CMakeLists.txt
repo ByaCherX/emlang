@@ -1,8 +1,8 @@
-# Clang compiler selection (cmake .. -DUSE_CLANG=ON)
-option(USE_CLANG "Use Clang compiler instead of default" OFF)
+cmake_minimum_required(VERSION 3.20)
+project(EMLang VERSION 1.0.0 LANGUAGES CXX)
 
-# Library build selection (cmake .. -DBUILD_LIBRARY=ON)
-option(BUILD_LIBRARY "Build EMLang standard library" ON)
+option(USE_CLANG "Use Clang compiler instead of default" OFF)
+option(BUILD_LIBRARY "Build EMLang standard library" OFF)
 
 # Compiler selection (must be before project() call)
 if(USE_CLANG)
@@ -35,44 +35,20 @@ if(USE_CLANG)
     endif()
 endif()
 
-cmake_minimum_required(VERSION 3.20)
-project(EMLang VERSION 1.0.0 LANGUAGES CXX)
-
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# Special compiler flags for Clang
-if(USE_CLANG)
-    message(STATUS "C Compiler: ${CMAKE_C_COMPILER}")
-    message(STATUS "CXX Compiler: ${CMAKE_CXX_COMPILER}")
-    
-    # General compiler flags for Clang
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-command-line-argument")
-    
-    # For MSVC compatibility on Windows
-    if(WIN32)
-        # Use MSVC C++ standard library, in MSVC compatible mode
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fms-compatibility-version=19.29")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fms-extensions")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdelayed-template-parsing")
-        # Use Visual Studio C runtime
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_CRT_SECURE_NO_WARNINGS")
-    endif()
-    
-    # Better error messages in debug mode
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcolor-diagnostics -fansi-escape-codes")
-    endif()
-endif()
 
 # For Windows DLL export/import symbols
 if(WIN32)
     add_definitions(-DWIN32_LEAN_AND_MEAN)
+    # Enable global symbol export for DLL
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+    # Set the DLL API calling convention
+    set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 endif()
 
-# LLVM configuration (optional for now)
-find_package(LLVM CONFIG)
+# LLVM configuration
+find_package(LLVM REQUIRED CONFIG)
 
 if(LLVM_FOUND)
     message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
@@ -82,18 +58,23 @@ if(LLVM_FOUND)
     separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
     add_definitions(${LLVM_DEFINITIONS_LIST})
     
+    # Map LLVM components to libraries - simplified for compatibility
     llvm_map_components_to_libnames(llvm_libs 
         support core analysis target
-        native nativecodegen
-        mcjit executionengine
+        native codegen
+        
+        # Target architectures - needed for InitializeAll*Target* functions
+        AArch64 ARM BPF WebAssembly RISCV NVPTX X86
+
+        mcjit executionengine runtimedyld
+        
         transformutils scalaropts instcombine ipo
-        mc asmprinter
+        mc asmprinter asmparser
     )
     set(LLVM_LIBRARIES ${llvm_libs})
     set(LLVM_ENABLED TRUE)
 else()
-    message(STATUS "LLVM not found - building without LLVM support")
-    set(LLVM_LIBRARIES "")
+    message(FATAL_ERROR "LLVM not found! Please install LLVM or set LLVM_DIR to the correct path")
     set(LLVM_ENABLED FALSE)
 endif()
 
@@ -102,16 +83,6 @@ include_directories(include)
 
 # Compiler components (as DLL)
 add_subdirectory(compiler)
-
-# EMLang standard library (optional - as static library)
-if(BUILD_LIBRARY)
-    message(STATUS "Building EMLang standard library")
-    add_subdirectory(library)
-    set(LIBRARY_TARGET emlang_lib)
-else()
-    message(STATUS "Skipping EMLang standard library build")
-    set(LIBRARY_TARGET "")
-endif()
 
 # ===========================
 # EMLang Executables
@@ -125,27 +96,25 @@ add_executable(emlang_check src/emlang_check.cpp)
 
 # ===========================
 
-# Include directories (conditional)
-if(BUILD_LIBRARY)
-    target_include_directories(emlang PRIVATE library/include)
-    target_include_directories(emlang_check PRIVATE library/include)
-endif()
-
 # Compiler DLL linkage for emlang_check
-target_link_libraries(emlang_check emlang_compiler)
+target_link_libraries(emlang PRIVATE emlang_compiler)
+target_link_libraries(emlang_check PRIVATE emlang_compiler)
+
+# Define EMLANG_DLL for importing symbols from emlang_compiler.dll
+target_compile_definitions(emlang PRIVATE EMLANG_DLL)
+target_compile_definitions(emlang_check PRIVATE EMLANG_DLL)
 
 # Linkage - compiler DLL always, library conditional
 if(BUILD_LIBRARY)
-    target_link_libraries(emlang emlang_compiler ${LIBRARY_TARGET})
-else()
-    target_link_libraries(emlang emlang_compiler)
-endif()
+    message(STATUS "Building EMLang standard library")
+    add_subdirectory(library)
 
-# Disable MSVC linker warnings
-if(MSVC)
-    set_target_properties(emlang PROPERTIES
-        LINK_FLAGS "/ignore:4197 /ignore:4199"
-    )
+    target_include_directories(emlang PRIVATE library/include)
+    target_include_directories(emlang_check PRIVATE library/include)
+    target_link_libraries(emlang PRIVATE emlang_lib)
+    target_link_libraries(emlang_check PRIVATE emlang_lib)
+else()
+    message(STATUS "Skipping EMLang standard library build")
 endif()
 
 # Copy DLL next to executable
@@ -163,3 +132,10 @@ add_custom_command(TARGET emlang_check POST_BUILD
     $<TARGET_FILE_DIR:emlang_check>
     COMMENT "Copying emlang_compiler.dll to emlang_check directory"
 )
+
+# Disable MSVC linker warnings
+if(MSVC)
+    set_target_properties(emlang PROPERTIES
+        LINK_FLAGS "/ignore:4197 /ignore:4199"
+    )
+endif()

@@ -124,15 +124,6 @@ if(ORCJIT_ENABLED)
         EMLANG_LLVM_VERSION_MAJOR=${LLVM_VERSION_MAJOR}
         EMLANG_LLVM_VERSION_MINOR=${LLVM_VERSION_MINOR}
     )
-    
-    # Advanced OrcJIT features based on LLVM version
-    if(LLVM_PACKAGE_VERSION VERSION_GREATER_EQUAL "12.0")
-        target_compile_definitions(emlang_codegen PRIVATE EMLANG_ORCJIT_ADVANCED)
-    endif()
-    
-    if(LLVM_PACKAGE_VERSION VERSION_GREATER_EQUAL "14.0")
-        target_compile_definitions(emlang_codegen PRIVATE EMLANG_ORCJIT_LATEST)
-    endif()
 
     message(STATUS "Codegen module configuration:")
     message(STATUS "  LLVM Version: ${LLVM_PACKAGE_VERSION}")
@@ -140,14 +131,6 @@ if(ORCJIT_ENABLED)
     message(STATUS "  Target Platform: ${CMAKE_SYSTEM_NAME}")
     message(STATUS "  Compiler: ${CMAKE_CXX_COMPILER_ID}")
     message(STATUS "  Build Type: ${CMAKE_BUILD_TYPE}")
-    
-else()
-    # Fallback mode without LLVM
-    target_compile_definitions(emlang_codegen PUBLIC 
-        EMLANG_NO_LLVM_CODEGEN
-        EMLANG_ORCJIT_DISABLED
-    )
-    message(STATUS "Building codegen module without LLVM OrcJIT support")
 endif()
 
 # Platform-specific configurations
@@ -236,15 +219,7 @@ endif()
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_definitions(emlang_codegen PRIVATE
         EMLANG_DEBUG_MODE
-        EMLANG_JIT_DEBUG
     )
-    
-    # Enable debug information for JIT
-    if(ORCJIT_ENABLED)
-        target_compile_definitions(emlang_codegen PRIVATE
-            EMLANG_JIT_DEBUG_INFO
-        )
-    endif()
 endif()
 
 # Installation rules

@@ -10,7 +10,7 @@
 [![LLVM](https://img.shields.io/badge/LLVM-17+-blue.svg)](https://llvm.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![C++](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](#prerequisites)
-[![v0.9.26](https://img.shields.io/badge/EMLang_Version-0.9.26-purple.svg)](version)
+[![v1.0.0](https://img.shields.io/badge/EMLang_Version-1.0.0.alpha.3-purple.svg)](version)
 
 EMLang is a statically-typed systems programming language designed for high-performance applications with ahead-of-time (AOT) compilation using LLVM. It combines modern language features with C-like performance and memory control.
 
@@ -52,92 +52,64 @@ emlang/
 
 ## ✨ Language Features
 
-#### ✅ **Primitive Types**
-```emlang
-// Integer types with explicit sizing
-let byte: int8 = 127;
-let short: int16 = 32767;
-let normal: int32 = 2147483647;
-let large: int64 = 9223372036854775807;
+### **Primitive Types**
 
-// Unsigned variants
-let ubyte: uint8 = 255;
-let ushort: uint16 = 65535;
-let uint: uint32 = 4294967295;
-let ulong: uint64 = 18446744073709551615;
+| Type     | Size   | Description      | Min Value | Max Value |
+|----------|--------|------------------|-----------|-----------|
+| `int8`   | 8-bit  | Signed integer   | -128 | 127 |
+| `int16`  | 16-bit | Signed integer   | -32,768 | 32,767 |
+| `int32`  | 32-bit | Signed integer   | -2,147,483,648 | 2,147,483,647 |
+| `int64`  | 64-bit | Signed integer   | -9,223,372,036,854,775,808 | 9,223,372,036,854,775,807 |
+| `uint8`  | 8-bit  | Unsigned integer | 0 | 255 |
+| `uint16` | 16-bit | Unsigned integer | 0 | 65,535 |
+| `uint32` | 32-bit | Unsigned integer | 0 | 4,294,967,295 |
+| `uint64` | 64-bit | Unsigned integer | 0 | 18,446,744,073,709,551,615 |
+| `float`  | 32-bit | Floating point   | ~-3.4e38 | ~3.4e38 |
+| `double` | 64-bit | Double precision | ~-1.8e308 | ~1.8e308 |
+| `bool`   | 1-bit  | Boolean          | `false` | `true` |
+| `char`   | 8-bit  | Character        | 0 | 255 |
 
-// Floating point precision
-let precision: float = 3.14159;
-let highPrecision: double = 2.718281828459045;
+### **Unicode and String Support**
 
-// Boolean and character types
-let flag: bool = true;
-let character: char = 'A';
-```
+| Feature                | Description | Examples |
+|------------------------|-------------|----------|
+| **Unicode Characters** | Full UTF-8 character support | `'😀'`, `'π'`, `'€'` |
+| **Escape Sequences**   | Standard C-style escapes | `'\n'`, `'\t'`, `'\\'`, `'\"'` |
+| **Unicode Escapes**    | Unicode code point notation | `'\u{03C0}'` (π), `'\u{20AC}'` (€) |
+| **String Literals**    | UTF-8 string support | `"Hello, World!"` |
+| **Path Strings**       | Windows/Unix path support | `"C:\\Users\\Name"` |
+| **Mixed Content**      | Unicode in strings | `"Càf Manü ★ ♠ ♥"` |
 
-#### ✅ **Unicode and String Support**
-```emlang
-// Unicode character literals
-let emoji: char = '😀';
-let greek: char = '\u{03C0}';  // π
-let euro: char = '\u{20AC}';   // €
+### **C-Style Pointer System**
 
-// String literals with escape sequences
-let message: str = "Hello, World!\n";
-let path: str = "C:\\Users\\Name\\Documents";
-let unicode: str = "Café Münü with symbols: ★ ♠ ♥";
-```
+| Feature | Operator | Description | Usage |
+|---------|----------|-------------|-------|
+| **Address-of** | `&` | Gets memory address | `&variable` |
+| **Dereference** | `*` | Accesses value at address | `*pointer` |
+| **Pointer Declaration** | `*` | Declares pointer type | `int32*` |
+| **Multi-level Pointers** | `**` | Pointer to pointer | `int32**` |
+| **Null Pointer** | `null` | Null pointer value | `ptr = null` |
 
-#### ✅ **C-Style Pointer System**
-```emlang
-function pointerDemo(): int32 {
-    let value: int32 = 42;
-    let ptr: int32* = &value;        // Address-of operator
-    let deref: int32 = *ptr;         // Dereference operator
-    
-    // Multi-level pointers
-    let ptrToPtr: int32** = &ptr;
-    let final: int32 = **ptrToPtr;
-    
-    return final;
-}
-```
+### **Function Declarations**
 
-#### ✅ **Function Declarations**
-```emlang
-function fibonacci(n: int32): int32 {
-    if (n <= 1) {
-        return n;
-    }
-    return fibonacci(n-1) + fibonacci(n-2);
-}
+| Feature | Syntax | Description | Example |
+|---------|--------|-------------|---------|
+| **Function Definition** | `function name(): type` | Regular function | `function add(a: int32, b: int32): int32` |
+| **External Functions** | `extern function` | External C functions | `extern function printf(format: str): int32` |
+| **Void Functions** | `: void` | No return value | `function print(): void` |
+| **Parameters** | `name: type` | Typed parameters | `(x: int32, y: float)` |
+| **Return Statement** | `return value` | Function return | `return x + y` |
 
-// External function declarations
-extern function printf(format: str): int32;
-```
+### **Control Flow**
 
-#### ✅ **Control Flow**
-```emlang
-function controlFlow(): void {
-    let x: int32 = 10;
-    
-    // Conditional statements
-    if (x > 5) {
-        // True branch
-    } else {
-        // False branch
-    }
-    
-    // Loop constructs
-    while (x > 0) {
-        x = x - 1;
-    }
-    
-    for (let i: int32 = 0; i < 10; i = i + 1) {
-        // Loop body
-    }
-}
-```
+| Structure | Syntax | Description | Features |
+|-----------|--------|-------------|----------|
+| **If Statement** | `if (condition) { }` | Conditional execution | With optional `else` |
+| **While Loop** | `while (condition) { }` | Pre-condition loop | Condition checked first |
+| **For Loop** | `for (init; condition; update)` | Counting loop | C-style syntax |
+| **Block Scope** | `{ ... }` | Code blocks | Local variable scope |
+| **Nested Structures** | - | All structures nestable | Unlimited nesting depth |
+
 
 ## 🏗️ Architecture & Implementation
 
@@ -166,6 +138,8 @@ function controlFlow(): void {
 - **Optimization passes** integration
 
 ### 📚 **Standard Library**
+> [!Warning]
+> The emlang standard library is not available at the moment. It will be available in beta.
 The library provides essential functionality across multiple domains:
 
 - **I/O Operations**: `emlang_print_*`, `emlang_read_*`, console control
@@ -178,7 +152,7 @@ The library provides essential functionality across multiple domains:
 
 ### Prerequisites
 - **CMake** 3.10 or higher
-- **C++17** compatible compiler (GCC 7+, Clang 5+, MSVC 2017+)
+- **C++17** compatible compiler (GCC 9+, Clang 8+, MSVC 2017+)
 - **LLVM** 14+ (automatically detected, enables code generation)
 - **Git** for cloning and version control
 
@@ -370,93 +344,6 @@ done
 ./build/Debug/emlang_check --all tests/phase3_pointer_test.em
 ```
 
-## 📈 Development Roadmap
-
-### ✅ **Completed Phases**
-
-#### **Phase 1**: Core Type System
-- [x] Primitive integer types (int8, int16, int32, int64)
-- [x] Unsigned variants (uint8, uint16, uint32, uint64)
-- [x] Floating point types (float, double)
-- [x] Boolean and void types
-- [x] LLVM backend integration
-
-#### **Phase 2**: Character & String System  
-- [x] Unicode character support (`char` type)
-- [x] String literals with escape sequences
-- [x] Character literals with Unicode escapes
-- [x] UTF-8 string handling
-- [x] Comprehensive string operations
-
-#### **Phase 3**: C-Style Pointer System
-- [x] Pointer type declarations (`int32*`, `char**`)
-- [x] Address-of operator (`&variable`)
-- [x] Dereference operator (`*pointer`)
-- [x] Multi-level pointer support
-- [x] Pointer arithmetic and type safety
-- [x] Complete semantic analysis
-
-### 🚧 **In Progress**
-
-#### **Phase 4**: Advanced Features
-- [ ] Array types and operations
-- [ ] Struct/record types
-- [ ] Enum types
-- [ ] Pattern matching
-
-### 🔮 **Future Plans**
-
-#### **Phase 5**: Advanced Language Features
-- [ ] Generic types and functions
-- [ ] Module system with imports
-- [ ] Memory ownership model
-- [ ] Async/await support
-
-#### **Phase 6**: Development Tools
-- [ ] Language Server Protocol (LSP)
-- [ ] IDE integration and plugins
-- [ ] Package manager
-- [ ] Documentation generator
-
-## 📚 Library Reference
-
-### Standard Library Modules
-
-#### 🔢 **Mathematics** (`math.h`)
-```c
-float emlang_pow(float base, float exp);     // Power function
-float emlang_sqrt(float x);                  // Square root
-float emlang_sin(float x);                   // Sine function
-float emlang_cos(float x);                   // Cosine function
-float emlang_tan(float x);                   // Tangent function
-float emlang_abs(float x);                   // Absolute value
-```
-
-#### 📝 **String Operations** (`string.h`)
-```c
-int emlang_strlen(const char* str);                    // String length
-int emlang_strcmp(const char* str1, const char* str2); // String comparison  
-char* emlang_strcpy(char* dest, const char* src);      // String copy
-char* emlang_to_upper(char* str);                      // Convert to uppercase
-char* emlang_to_lower(char* str);                      // Convert to lowercase
-```
-
-#### 💾 **Memory Management** (`memory.h`)
-```c
-void* emlang_malloc(int size);              // Allocate memory
-void emlang_free(void* ptr);                // Free allocated memory
-void emlang_memset(void* ptr, int val, int size); // Set memory values
-```
-
-#### 🖥️ **Input/Output** (`io.h`)
-```c
-void emlang_print_int(int value);           // Print integer
-void emlang_print_str(const char* str);     // Print string
-void emlang_print_char(char c);             // Print character
-int emlang_read_int(void);                  // Read integer from input
-char emlang_read_char(void);                // Read character from input
-```
-
 ## 🤝 Contributing
 
 We welcome contributions to EMLang! Here's how you can help:
@@ -492,41 +379,14 @@ We welcome contributions to EMLang! Here's how you can help:
 - **Testing**: Additional test cases and edge cases
 
 ## 📄 License
-
 EMLang is released under the **MIT License**. See [LICENSE](LICENSE) file for details.
-
-```
-MIT License
-
-Copyright (c) 2025 EMLang Project
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
 
 ---
 
 ## 🔗 Links & Resources
 
-- **📖 Documentation**: [EMLang Language Guide](docs/)
 - **🐛 Issue Tracker**: [GitHub Issues](https://github.com/ByaCherX/emlang/issues)
 - **💬 Discussions**: [GitHub Discussions](https://github.com/ByaCherX/emlang/discussions)
-- **📧 Contact**: [project@emlang.dev](mailto:project@emlang.dev)
 
 ---
 

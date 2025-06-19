@@ -44,6 +44,9 @@ set_target_properties(emlang_ast PROPERTIES
 
 # Compiler-specific flags
 if(MSVC)
+    target_compile_options(emlang_ast PRIVATE
+        /wd4251  # DLL interface warning for STL containers
+    )
     target_compile_options(emlang_ast PRIVATE /W4)
 else()
     target_compile_options(emlang_ast PRIVATE -Wall -Wextra -pedantic)
