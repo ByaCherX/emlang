@@ -29,10 +29,10 @@
 /***************************************
 *  Feature flags
 ***************************************/
-#define EMLANG_FEATURE_EXTERN_FUNCTIONS  0
 #define EMLANG_FEATURE_POINTERS          0
-#define EMLANG_FEATURE_STRINGS           0
-#define EMLANG_FEATURE_ARRAYS            0
+#define EMLANG_FEATURE_CASTING           0
+#define EMLANG_FEATURE_IMPORTS           0
+#define EMLANG_FEATURE_EXTERN_FUNCTIONS  0
 
 
 #endif // EMLANG_H
