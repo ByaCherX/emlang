@@ -96,24 +96,6 @@ private:
      */
     std::string getExpressionType(Expression& expr);
     
-    // ======================== ERROR REPORTING METHODS ========================
-    
-    /**
-     * @brief Reports a semantic error with location information
-     * @param message Descriptive error message
-     * @param line Source line number (0 for unknown)
-     * @param column Source column number (0 for unknown)
-     */
-    void error(const std::string& message, size_t line = 0, size_t column = 0);
-    
-    /**
-     * @brief Reports a semantic warning with location information
-     * @param message Descriptive warning message
-     * @param line Source line number (0 for unknown)
-     * @param column Source column number (0 for unknown)
-     */
-    void warning(const std::string& message, size_t line = 0, size_t column = 0);
-    
 public:
     /**
      * @brief Constructs a new Analyzer
@@ -154,24 +136,59 @@ public:
     void registerBuiltinFunctions();
     
     // ======================== AST VISITOR METHODS ========================
-    
+    // Main
+    void visit(Program& node) override;
+
+    // Expression
     void visit(LiteralExpr& node) override;
     void visit(IdentifierExpr& node) override;
     void visit(BinaryOpExpr& node) override;
     void visit(UnaryOpExpr& node) override;
+    void visit(AssignmentExpr& node) override;
     void visit(FunctionCallExpr& node) override;
+    void visit(MemberExpr& node) override;
+#ifdef EMLANG_FEATURE_CASTING
+        void visit(CastExpr& node) override;
+#endif
+    void visit(IndexExpr& node) override;
+    void visit(ArrayExpr& node) override;
+    void visit(ObjectExpr& node) override;
+#ifdef EMLANG_FEATURE_POINTERS
     void visit(DereferenceExpr& node) override;
     void visit(AddressOfExpr& node) override;
-    void visit(AssignmentExpr& node) override;
+#endif
+
+    // Declaration
     void visit(VariableDecl& node) override;
     void visit(FunctionDecl& node) override;
     void visit(ExternFunctionDecl& node) override;
+
+    // Statement
     void visit(BlockStmt& node) override;
     void visit(IfStmt& node) override;
     void visit(WhileStmt& node) override;
+    void visit(ForStmt& node) override;
     void visit(ReturnStmt& node) override;
     void visit(ExpressionStmt& node) override;
-    void visit(Program& node) override;
+
+private:
+    // ======================== ERROR REPORTING METHODS ========================
+
+    /**
+     * @brief Reports a semantic error with location information
+     * @param message Descriptive error message
+     * @param line Source line number (0 for unknown)
+     * @param column Source column number (0 for unknown)
+     */
+    void error(const std::string& message, size_t line = 0, size_t column = 0);
+    
+    /**
+     * @brief Reports a semantic warning with location information
+     * @param message Descriptive warning message
+     * @param line Source line number (0 for unknown)
+     * @param column Source column number (0 for unknown)
+     */
+    void warning(const std::string& message, size_t line = 0, size_t column = 0);
 };
 
 } // namespace emlang

@@ -132,6 +132,22 @@ public:
      * @return The result type for the operation
      */
     static std::string getCommonType(const std::string& type1, const std::string& type2);
+    
+    /**
+     * @brief Promotes numeric types for arithmetic operations
+     * @param type1 First operand type
+     * @param type2 Second operand type
+     * @return The promoted result type
+     */
+    static std::string promoteNumericTypes(const std::string& type1, const std::string& type2);
+    
+    /**
+     * @brief Checks if two types are compatible (alternative name for isCompatibleType)
+     * @param type1 First type
+     * @param type2 Second type
+     * @return true if types are compatible
+     */
+    static bool areTypesCompatible(const std::string& type1, const std::string& type2);
 };
 
 } // namespace emlang

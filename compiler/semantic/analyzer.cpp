@@ -1,12 +1,12 @@
 
 #include "semantic/analyzer.h"
 #include "semantic/type_checker.h"
-#include "builtins.h"
+#include "../../include/builtins.h"
+#include "ast.h"
 #include <iostream>
 
 namespace emlang {
 
-// Analyzer implementation
 
 Analyzer::Analyzer() : currentScope(nullptr), hasErrors(false) {
     // Initialize global scope
@@ -17,18 +17,9 @@ Analyzer::Analyzer() : currentScope(nullptr), hasErrors(false) {
     registerBuiltinFunctions();
 }
 
-bool Analyzer::analyze(Program& program) {
-    hasErrors = false;
-    
-    // Analyze all top-level statements
-    program.accept(*this);
-    
-    return !hasErrors;
-}
-
-bool Analyzer::hasSemanticErrors() const {
-    return hasErrors;
-}
+/***************************************
+*  SCOPE MANAGEMENT METHODS
+***************************************/
 
 void Analyzer::enterScope() {
     scopes.push_back(std::make_unique<Scope>(currentScope));
@@ -58,13 +49,21 @@ std::string Analyzer::getExpressionType(Expression& expr) {
     return resultType;
 }
 
-void Analyzer::error(const std::string& message, size_t line, size_t column) {
-    hasErrors = true;
-    std::cerr << "Semantic Error [" << line << ":" << column << "]: " << message << std::endl;
-}
+/***************************************
+*  ANALYZER MAIN
+***************************************/
 
-void Analyzer::warning(const std::string& message, size_t line, size_t column) {
-    std::cerr << "Semantic Warning [" << line << ":" << column << "]: " << message << std::endl;
+bool Analyzer::analyze(Program& program) {
+    hasErrors = false;
+    
+    // Analyze all top-level statements
+    program.accept(*this);
+    
+    
+    return !hasErrors;
+}
+bool Analyzer::hasSemanticErrors() const {
+    return hasErrors;
 }
 
 void Analyzer::registerBuiltinFunctions() {
@@ -86,21 +85,36 @@ void Analyzer::registerBuiltinFunctions() {
     }
 }
 
-// ======================== AST VISITOR IMPLEMENTATIONS ========================
+/***************************************
+*  AST VISITOR IMPLEMENTATIONS
+***************************************/
+
+void Analyzer::visit(Program& node) {
+    for (auto& stmt : node.statements) {
+        stmt->accept(*this);
+    }
+}
+
+/******************************
+* Visitor - Expression
+******************************/
 
 void Analyzer::visit(LiteralExpr& node) {
     switch (node.literalType) {
-        case LiteralType::NUMBER:
-            currentExpressionType = "number";
+        case LiteralType::INT:
+            currentExpressionType = "int32";
             break;
-        case LiteralType::STRING:
-            currentExpressionType = "string";
+        case LiteralType::FLOAT:
+            currentExpressionType = "float";
+            break;
+        case LiteralType::STR:
+            currentExpressionType = "str";
             break;
         case LiteralType::CHAR:
             currentExpressionType = "char";
             break;
-        case LiteralType::BOOLEAN:
-            currentExpressionType = "boolean";
+        case LiteralType::BOOL:
+            currentExpressionType = "bool";
             break;
         case LiteralType::NULL_LITERAL:
             currentExpressionType = "null";
@@ -124,51 +138,51 @@ void Analyzer::visit(BinaryOpExpr& node) {
     std::string rightType = getExpressionType(*node.right);
     
     // Arithmetic operators
-    if (node.operator_ == "+" || node.operator_ == "-" || node.operator_ == "*" || 
-        node.operator_ == "/" || node.operator_ == "%") {
+    if (node.operator_ == BinaryOpExpr::BinOp::ADD || 
+        node.operator_ == BinaryOpExpr::BinOp::SUB || 
+        node.operator_ == BinaryOpExpr::BinOp::MUL ||
+        node.operator_ == BinaryOpExpr::BinOp::DIV || 
+        node.operator_ == BinaryOpExpr::BinOp::MOD) {
         
         if (!TypeChecker::isNumericType(leftType) || !TypeChecker::isNumericType(rightType)) {
             error("Arithmetic operations require numeric types", node.line, node.column);
             currentExpressionType = "error";
             return;
         }
-        currentExpressionType = "number";
+        currentExpressionType = TypeChecker::promoteNumericTypes(leftType, rightType);
     }
     // Comparison operators
-    else if (node.operator_ == "<" || node.operator_ == ">" || 
-             node.operator_ == "<=" || node.operator_ == ">=") {
+    else if (node.operator_ == BinaryOpExpr::BinOp::LT || 
+             node.operator_ == BinaryOpExpr::BinOp::LE ||
+             node.operator_ == BinaryOpExpr::BinOp::GT || 
+             node.operator_ == BinaryOpExpr::BinOp::GE) {
         
         if (!TypeChecker::isNumericType(leftType) || !TypeChecker::isNumericType(rightType)) {
             error("Comparison operations require numeric types", node.line, node.column);
-            currentExpressionType = "error";
-            return;
         }
-        currentExpressionType = "boolean";
+        currentExpressionType = "bool";
     }
     // Equality operators
-    else if (node.operator_ == "==" || node.operator_ == "!=") {
-        // Special Case: null and pointer comparison
-        bool isNullComparison = (leftType == "null" && TypeChecker::isPointerType(rightType)) || 
-                               (rightType == "null" && TypeChecker::isPointerType(leftType));
+    else if (node.operator_ == BinaryOpExpr::BinOp::EQ || 
+             node.operator_ == BinaryOpExpr::BinOp::NE) {
         
-        if (!TypeChecker::isCompatibleType(leftType, rightType) && !isNullComparison) {
-            error("Equality operations require compatible types", node.line, node.column);
-            currentExpressionType = "error";
-            return;
+        if (!TypeChecker::areTypesCompatible(leftType, rightType)) {
+            error("Cannot compare incompatible types: " + leftType + " and " + rightType, 
+                  node.line, node.column);
         }
-        currentExpressionType = "boolean";
+        currentExpressionType = "bool";
     }
     // Logical operators
-    else if (node.operator_ == "&&" || node.operator_ == "||") {
-        if (!TypeChecker::isBooleanType(leftType) || !TypeChecker::isBooleanType(rightType)) {
-            error("Logical operations require boolean types", node.line, node.column);
-            currentExpressionType = "error";
-            return;
+    else if (node.operator_ == BinaryOpExpr::BinOp::LAND || 
+             node.operator_ == BinaryOpExpr::BinOp::LOR) {
+        
+        if (leftType != "bool" || rightType != "bool") {
+            error("Logical operations require boolean operands", node.line, node.column);
         }
-        currentExpressionType = "boolean";
+        currentExpressionType = "bool";    
     }
     else {
-        error("Unknown binary operator: " + node.operator_, node.line, node.column);
+        error("Unknown binary operator: " + binOpToString(node.operator_), node.line, node.column);
         currentExpressionType = "error";
     }
 }
@@ -176,66 +190,26 @@ void Analyzer::visit(BinaryOpExpr& node) {
 void Analyzer::visit(UnaryOpExpr& node) {
     std::string operandType = getExpressionType(*node.operand);
     
-    if (node.operator_ == "-") {
+    if (node.operator_ == BinaryOpExpr::BinOp::SUB) {
         if (!TypeChecker::isNumericType(operandType)) {
             error("Unary minus requires numeric type", node.line, node.column);
             currentExpressionType = "error";
             return;
         }
-        currentExpressionType = "number";
+        currentExpressionType = operandType; // Keep the same numeric type
     }
-    else if (node.operator_ == "!") {
-        if (!TypeChecker::isBooleanType(operandType)) {
+    else if (node.operator_ == BinaryOpExpr::BinOp::LNOT) {
+        if (operandType != "bool") {
             error("Logical not requires boolean type", node.line, node.column);
             currentExpressionType = "error";
             return;
         }
-        currentExpressionType = "boolean";
+        currentExpressionType = "bool";
     }
     else {
-        error("Unknown unary operator: " + node.operator_, node.line, node.column);
+        error("Unknown unary operator: " + binOpToString(node.operator_), node.line, node.column);
         currentExpressionType = "error";
     }
-}
-
-void Analyzer::visit(FunctionCallExpr& node) {
-    Symbol* symbol = currentScope->lookup(node.functionName);
-    if (!symbol) {
-        error("Undefined function: " + node.functionName, node.line, node.column);
-        currentExpressionType = "error";
-        return;
-    }
-    
-    if (!symbol->isFunction) {
-        error("Identifier is not a function: " + node.functionName, node.line, node.column);
-        currentExpressionType = "error";
-        return;
-    }
-    
-    // TODO: Check argument types and count
-    currentExpressionType = symbol->type;
-}
-
-void Analyzer::visit(DereferenceExpr& node) {
-    node.operand->accept(*this);
-    std::string operandType = getExpressionType(*node.operand);
-    
-    if (!TypeChecker::isPointerType(operandType)) {
-        error("Cannot dereference non-pointer type '" + operandType + "'", node.line, node.column);
-        currentExpressionType = "error";
-        return;
-    }
-    
-    // Dereference gives us the base type
-    currentExpressionType = TypeChecker::getPointerBaseType(operandType);
-}
-
-void Analyzer::visit(AddressOfExpr& node) {
-    node.operand->accept(*this);
-    std::string operandType = getExpressionType(*node.operand);
-    
-    // Address-of operation creates a pointer to the operand type
-    currentExpressionType = TypeChecker::makePointerType(operandType);
 }
 
 void Analyzer::visit(AssignmentExpr& node) {
@@ -260,7 +234,9 @@ void Analyzer::visit(AssignmentExpr& node) {
             return;
         }
         isValidLvalue = true;
-    } else if (dynamic_cast<DereferenceExpr*>(node.target.get())) {
+    }
+#ifdef EMLANG_FEATURE_POINTERS
+    else if (dynamic_cast<DereferenceExpr*>(node.target.get())) {
         // Target is a dereference expression, which is a valid lvalue
         if (!TypeChecker::isPointerType(targetType)) {
             error("Cannot dereference non-pointer type: " + targetType, node.line, node.column);
@@ -269,6 +245,7 @@ void Analyzer::visit(AssignmentExpr& node) {
         }
         isValidLvalue = true;
     }
+#endif // EMLANG_FEATURE_POINTERS
     
     if (!isValidLvalue) {
         error("Left side of assignment is not a valid lvalue", node.line, node.column);
@@ -292,6 +269,129 @@ void Analyzer::visit(AssignmentExpr& node) {
     currentExpressionType = targetType;
 }
 
+void Analyzer::visit(FunctionCallExpr& node) {
+    Symbol* symbol = currentScope->lookup(node.functionName);
+    if (!symbol) {
+        error("Undefined function: " + node.functionName, node.line, node.column);
+        currentExpressionType = "error";
+        return;
+    }
+    
+    if (!symbol->isFunction) {
+        error("Identifier is not a function: " + node.functionName, node.line, node.column);
+        currentExpressionType = "error";
+        return;
+    }
+    
+    // TODO: Check argument types and count
+    currentExpressionType = symbol->type;
+}
+
+void Analyzer::visit(MemberExpr& node) {
+    // Analyze the object expression first
+    std::string objectType = getExpressionType(*node.object);
+    
+    // For now, set the expression type to unknown
+    // TODO: Implement proper member access type checking
+    currentExpressionType = "unknown";
+    
+    // TODO: Add proper member resolution logic
+    // This would involve checking if the object type has the requested member
+    // and determining the member's type
+}
+
+void Analyzer::visit(IndexExpr& node) {
+    // Analyze the array expression
+    std::string arrayType = getExpressionType(*node.array);
+    
+    // Analyze the index expression
+    std::string indexType = getExpressionType(*node.index);
+    
+    // Check that index is an integer type
+    if (indexType != "int32" && indexType != "int64" && indexType != "isize" && 
+        indexType != "uint32" && indexType != "uint64" && indexType != "usize") {
+        error("Array index must be an integer type, got: " + indexType, 
+              node.line, node.column);
+    }
+    
+    // TODO: Extract element type from array type
+    // For now, assume unknown type
+    currentExpressionType = "unknown";
+}
+
+void Analyzer::visit(ArrayExpr& node) {
+    // Analyze all elements
+    std::string elementType = "";
+    bool firstElement = true;
+    
+    for (auto& element : node.elements) {
+        std::string currentElementType = getExpressionType(*element);
+        
+        if (firstElement) {
+            elementType = currentElementType;
+            firstElement = false;
+        } else if (elementType != currentElementType) {
+            error("Array elements must have the same type. Expected: " + 
+                  elementType + ", got: " + currentElementType, 
+                  node.line, node.column);
+        }
+    }
+    
+    // Set array type (element type + [])
+    currentExpressionType = elementType.empty() ? "unknown[]" : elementType + "[]";
+}
+
+void Analyzer::visit(ObjectExpr& node) {
+    // Analyze all field values
+    for (auto& field : node.fields) {
+        getExpressionType(*field.value);
+    }
+    
+    // For now, set object type to generic object
+    currentExpressionType = "object";
+}
+
+#ifdef EMLANG_FEATURE_CASTING
+void Analyzer::visit(CastExpr& node) {
+    // Analyze the operand expression
+    std::string operandType = getExpressionType(*node.operand);
+    
+    // TODO: Add cast validity checking
+    // Check if cast from operandType to targetType is valid
+    
+    // Set the expression type to the target type
+    currentExpressionType = node.targetType;
+}
+#endif // EMLANG_FEATURE_CASTING
+
+#ifdef EMLANG_FEATURE_POINTERS
+void Analyzer::visit(DereferenceExpr& node) {
+    node.operand->accept(*this);
+    std::string operandType = getExpressionType(*node.operand);
+    
+    if (!TypeChecker::isPointerType(operandType)) {
+        error("Cannot dereference non-pointer type '" + operandType + "'", node.line, node.column);
+        currentExpressionType = "error";
+        return;
+    }
+    
+    // Dereference gives us the base type
+    currentExpressionType = TypeChecker::getPointerBaseType(operandType);
+}
+
+void Analyzer::visit(AddressOfExpr& node) {
+    node.operand->accept(*this);
+    std::string operandType = getExpressionType(*node.operand);
+    
+    // Address-of operation creates a pointer to the operand type
+    currentExpressionType = TypeChecker::makePointerType(operandType);
+}
+#endif // EMLANG_FEATURE_POINTERS
+
+/******************************
+* Visitor - Declaration
+******************************/
+
 void Analyzer::visit(VariableDecl& node) {
     // Check if variable already exists in current scope
     if (currentScope->existsInCurrentScope(node.name)) {
@@ -302,15 +402,16 @@ void Analyzer::visit(VariableDecl& node) {
     // Type check initializer if present
     if (node.initializer) {
         std::string initType = getExpressionType(*node.initializer);
-        if (!node.type.empty() && !TypeChecker::isCompatibleType(node.type, initType)) {
-            error("Type mismatch in variable declaration: expected " + node.type + ", got " + initType, 
+        std::string value = node.type.has_value() ? node.type.value() : "void";
+        if (!value.empty() && !TypeChecker::isCompatibleType(value, initType)) {
+            error("Type mismatch in variable declaration: expected " + value + ", got " + initType, 
                   node.line, node.column);
             return;
         }
     }
     
     // Define variable in current scope
-    std::string varType = node.type.empty() ? currentExpressionType : node.type;
+    std::string varType = node.type->empty() ? currentExpressionType : node.type.value();
     currentScope->define(node.name, varType, node.isConstant, false, node.line, node.column);
 }
 
@@ -322,7 +423,7 @@ void Analyzer::visit(FunctionDecl& node) {
     }
     
     // Define function in current scope
-    currentScope->define(node.name, node.returnType, false, true, node.line, node.column);
+    currentScope->define(node.name, node.returnType.value(), false, true, node.line, node.column);
     
     // Enter function scope
     enterScope();
@@ -334,7 +435,7 @@ void Analyzer::visit(FunctionDecl& node) {
     
     // Set current function return type
     std::string oldReturnType = currentFunctionReturnType;
-    currentFunctionReturnType = node.returnType;
+    currentFunctionReturnType = node.returnType.value();
     
     // Analyze function body
     if (node.body) {
@@ -371,6 +472,10 @@ void Analyzer::visit(ExternFunctionDecl& node) {
     // External functions are marked as functions and constant (cannot be redefined)
     currentScope->define(node.name, node.returnType, true, true, node.line, node.column);
 }
+
+/******************************
+* Visitor - Statement
+******************************/
 
 void Analyzer::visit(BlockStmt& node) {
     enterScope();
@@ -412,6 +517,34 @@ void Analyzer::visit(WhileStmt& node) {
     }
 }
 
+void Analyzer::visit(ForStmt& node) {
+    enterScope();
+    
+    // Analyze initializer if present
+    if (node.initializer) {
+        node.initializer->accept(*this);
+    }
+    
+    // Analyze condition if present
+    if (node.condition) {
+        std::string conditionType = getExpressionType(*node.condition);
+        if (conditionType != "bool") {
+            error("For loop condition must be boolean, got: " + conditionType, 
+                  node.line, node.column);
+        }
+    }
+    
+    // Analyze increment if present
+    if (node.increment) {
+        getExpressionType(*node.increment);
+    }
+    
+    // Analyze body
+    node.body->accept(*this);
+    
+    exitScope();
+}
+
 void Analyzer::visit(ReturnStmt& node) {
     if (currentFunctionReturnType.empty()) {
         error("Return statement outside of function", node.line, node.column);
@@ -433,10 +566,17 @@ void Analyzer::visit(ExpressionStmt& node) {
     node.expression->accept(*this);
 }
 
-void Analyzer::visit(Program& node) {
-    for (auto& stmt : node.statements) {
-        stmt->accept(*this);
-    }
+/***************************************
+*  AST error/warning reporting
+***************************************/
+
+void Analyzer::error(const std::string& message, size_t line, size_t column) {
+    hasErrors = true;
+    std::cerr << "Semantic Error [" << line << ":" << column << "]: " << message << std::endl;
+}
+
+void Analyzer::warning(const std::string& message, size_t line, size_t column) {
+    std::cerr << "Semantic Warning [" << line << ":" << column << "]: " << message << std::endl;
 }
 
 } // namespace emlang
