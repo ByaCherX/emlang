@@ -186,4 +186,21 @@ std::string TypeChecker::getCommonType(const std::string& type1, const std::stri
     return "";
 }
 
+std::string TypeChecker::promoteNumericTypes(const std::string& type1, const std::string& type2) {
+    // Simple promotion rules - return the "larger" type
+    if (type1 == "double" || type2 == "double") return "double";
+    if (type1 == "float" || type2 == "float") return "float";
+    if (type1 == "int64" || type2 == "int64") return "int64";
+    if (type1 == "int32" || type2 == "int32") return "int32";
+    if (type1 == "int16" || type2 == "int16") return "int16";
+    if (type1 == "int8" || type2 == "int8") return "int8";
+    
+    // Default fallback
+    return type1;
+}
+
+bool TypeChecker::areTypesCompatible(const std::string& type1, const std::string& type2) {
+    return isCompatibleType(type1, type2);
+}
+
 } // namespace emlang
