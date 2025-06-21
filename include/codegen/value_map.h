@@ -152,7 +152,7 @@ public:
      * @param contextManager LLVM context manager for type creation
      * @return LLVM type pointer or nullptr if unknown
      */
-    llvm::Type* getLLVMType(const std::string& typeName, class LLVMContextManager& contextManager);
+    llvm::Type* getLLVMType(const std::string& typeName, class ContextManager& contextManager);
 
     /**
      * @brief Creates LLVM pointer type for the given base type
@@ -160,7 +160,7 @@ public:
      * @param contextManager LLVM context manager
      * @return LLVM pointer type
      */
-    llvm::Type* getPointerType(const std::string& baseTypeName, class LLVMContextManager& contextManager);
+    llvm::Type* getPointerType(const std::string& baseTypeName, class ContextManager& contextManager);
 
     // ======================== POINTER TYPE HELPERS ========================
 
@@ -171,7 +171,7 @@ public:
      * @param contextManager LLVM context manager
      * @return LLVM type of pointed-to element
      */
-    llvm::Type* getElementTypeFromPointer(llvm::Value* pointerValue, const std::string& sourceType, class LLVMContextManager& contextManager);
+    llvm::Type* getElementTypeFromPointer(llvm::Value* pointerValue, const std::string& sourceType, class ContextManager& contextManager);
 
     /**
      * @brief Gets pointee type from pointer type string

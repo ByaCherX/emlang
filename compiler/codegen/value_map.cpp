@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "codegen/value_map.h"
-#include "codegen/llvm_context.h"
+#include "codegen/context.h"
 
 // Disable LLVM warnings
 #ifdef _MSC_VER
@@ -33,8 +33,9 @@ ValueMap::ValueMap() {};
 
 // ======================== TYPE MAPPING ========================
 
-llvm::Type* ValueMap::getLLVMType(const std::string& typeName, LLVMContextManager& contextManager) {
+llvm::Type* ValueMap::getLLVMType(const std::string& typeName, ContextManager& contextManager) {
     llvm::LLVMContext& ctx = contextManager.getContext();
+
 
     // Handle pointer types
     if (typeName.find('*') != std::string::npos) {
@@ -69,7 +70,7 @@ llvm::Type* ValueMap::getLLVMType(const std::string& typeName, LLVMContextManage
     return nullptr;
 }
 
-llvm::Type* ValueMap::getPointerType(const std::string& baseTypeName, LLVMContextManager& contextManager) {
+llvm::Type* ValueMap::getPointerType(const std::string& baseTypeName, ContextManager& contextManager) {
     // Extract base type (remove *)
     std::string cleanType = getPointeeType(baseTypeName);
     
@@ -87,7 +88,7 @@ llvm::Type* ValueMap::getPointerType(const std::string& baseTypeName, LLVMContex
 llvm::Type* ValueMap::getElementTypeFromPointer(
     llvm::Value* pointerValue,
     const std::string& sourceType,
-    LLVMContextManager& contextManager
+    ContextManager& contextManager
 ) {
     // In LLVM 20+ with opaque pointers, we need to determine type from context
     // Try to determine from source type
