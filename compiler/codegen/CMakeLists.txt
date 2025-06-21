@@ -25,6 +25,11 @@ set(CODEGEN_SOURCES
     # main codegen entry point
     codegen.cpp
 
+    # Code generation components
+    CGExpr.cpp
+    CGDecl.cpp
+    CGStmt.cpp
+
     # Core infrastructure
     value_map.cpp
     context.cpp
@@ -50,6 +55,11 @@ set(CODEGEN_SOURCES
 set(CODEGEN_HEADERS
     # main codegen header
     ${CMAKE_SOURCE_DIR}/include/codegen/codegen.h
+
+    # Code generation components
+    ${CMAKE_SOURCE_DIR}/include/codegen/CGExpr.h
+    ${CMAKE_SOURCE_DIR}/include/codegen/CGDecl.h
+    ${CMAKE_SOURCE_DIR}/include/codegen/CGStmt.h
 
     # Core infrastructure headers
     ${CMAKE_SOURCE_DIR}/include/codegen/value_map.h

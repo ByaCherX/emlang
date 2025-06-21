@@ -21,6 +21,9 @@
 #include "context.h"
 #include "codegen_error.h"
 #include "builtins_integration.h"
+#include "CGExpr.h"
+#include "CGDecl.h"
+#include "CGStmt.h"
 #include <memory>
 #include <string>
 
@@ -46,18 +49,23 @@ namespace codegen {
 
 /**
  * @class CodeGenerator
- * @brief Main code generator that translates EMLang AST to LLVM IR
+ * @brief Main code generator that orchestrates LLVM IR generation
  * 
- * CodeGenerator is the primary class responsible for converting EMLang's
- * Abstract Syntax Tree into LLVM Intermediate Representation. It uses
- * modular components for value mapping, LLVM context management, and
- * error handling.
+ * CodeGenerator is the primary class responsible for coordinating EMLang's
+ * Abstract Syntax Tree conversion to LLVM Intermediate Representation. It uses
+ * modular components for expression, declaration, and statement generation,
+ * along with value mapping, LLVM context management, and error handling.
  */
-class EMLANG_API CodeGenerator : public ASTVisitor {
+class EMLANG_API CodeGenerator {
 private:
     std::unique_ptr<codegen::ContextManager> contextManager;
     std::unique_ptr<codegen::ValueMap> valueMap;
     std::unique_ptr<CodegenErrorReporter> errorReporter;
+
+    // Code generation components
+    std::unique_ptr<CGExpr> exprGenerator;
+    std::unique_ptr<CGDecl> declGenerator;
+    std::unique_ptr<CGStmt> stmtGenerator;
 
     llvm::Value* currentValue;
     std::string currentExpressionType;
@@ -134,43 +142,37 @@ public:
      */
     bool hasErrors() const;
 
-    // ========================================================
-    // AST Visitor implementations
-    // ========================================================
-    // main entry point for AST traversal
-    void visit(Program& node) override;
+    // ======================== COMPONENT ACCESS ========================
 
-    // Expression visitors
-    void visit(LiteralExpr& node) override;
-    void visit(IdentifierExpr& node) override;
-    void visit(BinaryOpExpr& node) override;
-    void visit(UnaryOpExpr& node) override;
-    void visit(AssignmentExpr& node) override;
-    void visit(FunctionCallExpr& node) override;
-    void visit(MemberExpr& node) override;
-#ifdef EMLANG_FEATURE_CASTING
-    void visit(CastExpr& node) override;
-#endif // EMLANG_FEATURE_CASTING
-    void visit(IndexExpr& node) override;
-    void visit(ArrayExpr& node) override;
-    void visit(ObjectExpr& node) override;
-#ifdef EMLANG_FEATURE_POINTERS
-    void visit(DereferenceExpr& node) override;
-    void visit(AddressOfExpr& node) override;
-#endif // EMLANG_FEATURE_POINTERS
+    /**
+     * @brief Gets the expression generator
+     * @return Reference to the expression generator
+     */
+    CGExpr& getExprGenerator() { return *exprGenerator; }
 
-    // Declaration visitors
-    void visit(VariableDecl& node) override;
-    void visit(FunctionDecl& node) override;
-    void visit(ExternFunctionDecl& node) override;
+    /**
+     * @brief Gets the declaration generator
+     * @return Reference to the declaration generator
+     */
+    CGDecl& getDeclGenerator() { return *declGenerator; }
 
-    // Statement visitors
-    void visit(BlockStmt& node) override;
-    void visit(IfStmt& node) override;
-    void visit(WhileStmt& node) override;
-    void visit(ForStmt& node) override;
-    void visit(ReturnStmt& node) override;
-    void visit(ExpressionStmt& node) override;
+    /**
+     * @brief Gets the statement generator
+     * @return Reference to the statement generator
+     */
+    CGStmt& getStmtGenerator() { return *stmtGenerator; }
+
+    /**
+     * @brief Gets the context manager
+     * @return Reference to the context manager
+     */
+    ContextManager& getContextManager() { return *contextManager; }
+
+    /**
+     * @brief Gets the value map
+     * @return Reference to the value map
+     */
+    ValueMap& getValueMap() { return *valueMap; }
 
 private:
     // ======================== ERROR HANDLING ========================
