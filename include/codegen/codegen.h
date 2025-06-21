@@ -106,12 +106,6 @@ public:
     // ======================== EXECUTION ========================
 
     /**
-     * @brief JIT compiles and executes the main function
-     * @return Exit code returned by the main function
-     */
-    int executeMain();
-
-    /**
      * @brief Generates code object file from the LLVM IR
      * @param filename Path to the output object file (typically .o extension)
      *

@@ -7,7 +7,8 @@
 // Main code generator implementation for EMLang
 //===----------------------------------------------------------------------===//
 
-#include "codegen.h"
+#include "codegen/codegen.h"
+#include "ast.h"
 
 #include <llvm/IR/Verifier.h>
 #include <llvm/IR/Constants.h>
@@ -106,10 +107,6 @@ void CodeGenerator::printIR() const {
 /******************************
 * EXECUTION
 ******************************/
-
-int CodeGenerator::executeMain() {
-    return contextManager->executeMain();
-}
 
 void CodeGenerator::writeCodeToFile(const std::string& filename, bool emitLLVM) {
     if (emitLLVM) {
