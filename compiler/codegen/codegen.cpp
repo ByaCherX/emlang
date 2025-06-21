@@ -31,7 +31,7 @@ namespace codegen {
 CodeGenerator::CodeGenerator(const std::string& moduleName, OptimizationLevel optLevel) 
     : currentValue(nullptr) {
     // Initialize modular components
-    contextManager = std::make_unique<LLVMContextManager>(moduleName, optLevel);
+    contextManager = std::make_unique<ContextManager>(moduleName, optLevel);
     valueMap = std::make_unique<ValueMap>();
     errorReporter = std::make_unique<CodegenErrorReporter>();
     

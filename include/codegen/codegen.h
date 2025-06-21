@@ -18,7 +18,7 @@
 #include <emlang_export.h>
 #include "ast.h"
 #include "value_map.h"
-#include "llvm_context.h"
+#include "context.h"
 #include "codegen_error.h"
 #include "builtins_integration.h"
 #include <memory>
@@ -55,7 +55,7 @@ namespace codegen {
  */
 class EMLANG_API CodeGenerator : public ASTVisitor {
 private:
-    std::unique_ptr<codegen::LLVMContextManager> contextManager;
+    std::unique_ptr<codegen::ContextManager> contextManager;
     std::unique_ptr<codegen::ValueMap> valueMap;
     std::unique_ptr<CodegenErrorReporter> errorReporter;
 

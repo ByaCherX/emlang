@@ -1,13 +1,13 @@
-//===--- llvm_context.cpp - LLVM Context Management Implementation --------===//
+//===--- context.cpp - Context Management Implementation ------------------===//
 //
 // Part of the RNR Project, under the Apache License v2.0 with LLVM Exceptions.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// Implementation of LLVM context management for EMLang code generation
+// Implementation of context management for EMLang code generation
 //===----------------------------------------------------------------------===//
 
-#include "codegen/llvm_context.h"
+#include "codegen/context.h"
 
 // Disable LLVM warnings
 #ifdef _MSC_VER
@@ -35,8 +35,6 @@
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/MC/TargetRegistry.h>
 #include <llvm/TargetParser/Triple.h>
-#include <llvm/ExecutionEngine/ExecutionEngine.h>
-#include <llvm/ExecutionEngine/GenericValue.h>
 
 #include <optional>
 
@@ -52,7 +50,7 @@ namespace codegen {
 
 // ======================== CONSTRUCTION ========================
 
-LLVMContextManager::LLVMContextManager(const std::string& moduleName, OptimizationLevel optLevel)
+ContextManager::ContextManager(const std::string& moduleName, OptimizationLevel optLevel)
     : context(std::make_unique<llvm::LLVMContext>()),
       module(std::make_unique<llvm::Module>(moduleName, *context)),
       builder(std::make_unique<llvm::IRBuilder<>>(*context)),
@@ -64,7 +62,7 @@ LLVMContextManager::LLVMContextManager(const std::string& moduleName, Optimizati
 
 // ======================== ALLOCA HELPER ========================
 
-llvm::Value* LLVMContextManager::createEntryBlockAlloca(llvm::Function* function, 
+llvm::Value* ContextManager::createEntryBlockAlloca(llvm::Function* function, 
                                                        const std::string& varName, 
                                                        llvm::Type* type) {
     llvm::IRBuilder<> tmpBuilder(&function->getEntryBlock(), function->getEntryBlock().begin());
@@ -73,15 +71,15 @@ llvm::Value* LLVMContextManager::createEntryBlockAlloca(llvm::Function* function
 
 // ======================== OPTIMIZATION CONTROL ========================
 
-void LLVMContextManager::setOptimizationLevel(OptimizationLevel level) {
+void ContextManager::setOptimizationLevel(OptimizationLevel level) {
     optimizationLevel = level;
 }
 
-OptimizationLevel LLVMContextManager::getOptimizationLevel() const {
+OptimizationLevel ContextManager::getOptimizationLevel() const {
     return optimizationLevel;
 }
 
-void LLVMContextManager::runOptimizationPasses() {
+void ContextManager::runOptimizationPasses() {
     if (optimizationLevel == OptimizationLevel::None) {
         return; // No optimizations
     }
@@ -96,7 +94,7 @@ void LLVMContextManager::runOptimizationPasses() {
             functionPassManager->add(llvm::createInstructionCombiningPass());
             functionPassManager->add(llvm::createReassociatePass());
             break;
-              case OptimizationLevel::O2:
+        case OptimizationLevel::O2:
             functionPassManager->add(llvm::createPromoteMemoryToRegisterPass());
             functionPassManager->add(llvm::createInstructionCombiningPass());
             functionPassManager->add(llvm::createReassociatePass());
@@ -129,11 +127,11 @@ void LLVMContextManager::runOptimizationPasses() {
 
 // ======================== OUTPUT GENERATION ========================
 
-void LLVMContextManager::printIR() const {
+void ContextManager::printIR() const {
     module->print(llvm::outs(), nullptr);
 }
 
-void LLVMContextManager::writeIRToFile(const std::string& filename) const {
+void ContextManager::writeIRToFile(const std::string& filename) const {
     std::error_code errorCode;
     llvm::raw_fd_ostream file(filename, errorCode, llvm::sys::fs::OF_None);
     
@@ -145,13 +143,12 @@ void LLVMContextManager::writeIRToFile(const std::string& filename) const {
     module->print(file, nullptr);
 }
 
-void LLVMContextManager::writeObjectFile(const std::string& filename) const {
+void ContextManager::writeObjectFile(const std::string& filename) const {
     // Initialize the target registry
-    llvm::InitializeAllTargetInfos();
-    llvm::InitializeAllTargets();
-    llvm::InitializeAllTargetMCs();    
-    llvm::InitializeAllAsmParsers();
-    llvm::InitializeAllAsmPrinters();
+    llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmPrinter();
+    llvm::InitializeNativeTargetAsmParser();
+
     
     auto targetTriple = llvm::Triple::getArchTypeName(llvm::Triple::x86_64); //getDefaultTargetTriple();
     module->setTargetTriple(targetTriple);
@@ -164,7 +161,8 @@ void LLVMContextManager::writeObjectFile(const std::string& filename) const {
         return;
     }
     
-    auto CPU = "generic";    auto features = "";
+    auto CPU = "generic";    
+    auto features = "";
     
     llvm::TargetOptions opt;
     std::optional<llvm::Reloc::Model> RM = std::nullopt;
@@ -192,57 +190,15 @@ void LLVMContextManager::writeObjectFile(const std::string& filename) const {
     dest.flush();
 }
 
-int LLVMContextManager::executeMain() {
-    // Find main function
-    llvm::Function* mainFunction = module->getFunction("main");
-    if (!mainFunction) {
-        std::cerr << "Error: No main function found" << std::endl;
-        return -1;
-    }
-    
-    // Verify the module
-    std::string error;
-    llvm::raw_string_ostream errorStream(error);
-    if (llvm::verifyModule(*module, &errorStream)) {
-        std::cerr << "Module verification failed: " << error << std::endl;
-        return -1;
-    }
-    
-    // Create execution engine
-    llvm::EngineBuilder engineBuilder(std::move(module));
-    std::string engineError;
-    engineBuilder.setErrorStr(&engineError);
-    engineBuilder.setEngineKind(llvm::EngineKind::JIT);
-    
-    auto executionEngine = engineBuilder.create();
-    if (!executionEngine) {
-        std::cerr << "Failed to create execution engine: " << engineError << std::endl;
-        return -1;
-    }
-    
-    // JIT the main function
-    executionEngine->finalizeObject();
-    
-    // Get the main function pointer
-    auto mainPtr = (int(*)())executionEngine->getPointerToFunction(mainFunction);
-    if (!mainPtr) {
-        std::cerr << "Error: Could not get pointer to main function" << std::endl;
-        return -1;
-    }
-    
-    // Execute main function
-    return mainPtr();
-}
-
 // ======================== INITIALIZATION HELPERS ========================
 
-void LLVMContextManager::initializeTargets() {
+void ContextManager::initializeTargets() {
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
     llvm::InitializeNativeTargetAsmParser();
 }
 
-void LLVMContextManager::registerBuiltinFunctions() {    // Register printf function
+void ContextManager::registerBuiltinFunctions() {    // Register printf function
     llvm::FunctionType* printfType = llvm::FunctionType::get(
         llvm::Type::getInt32Ty(*context),
         llvm::PointerType::get(*context, 0),

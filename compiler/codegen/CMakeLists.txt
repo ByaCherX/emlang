@@ -27,7 +27,7 @@ set(CODEGEN_SOURCES
 
     # Core infrastructure
     value_map.cpp
-    llvm_context.cpp
+    context.cpp
     codegen_error.cpp
     #target_config.cpp
       
@@ -53,7 +53,7 @@ set(CODEGEN_HEADERS
 
     # Core infrastructure headers
     ${CMAKE_SOURCE_DIR}/include/codegen/value_map.h
-    ${CMAKE_SOURCE_DIR}/include/codegen/llvm_context.h
+    ${CMAKE_SOURCE_DIR}/include/codegen/context.h
     ${CMAKE_SOURCE_DIR}/include/codegen/codegen_error.h
     #target_config.h
     
