@@ -111,6 +111,16 @@ std::unique_ptr<Program> Parser::parseProgram() {
 
 StatementPtr Parser::parseStatement() {
     try {
+        // Skip newlines and handle empty lines
+        while (match(TokenType::NEWLINE)) {
+            // Skip newlines - continue to next statement
+        }
+        
+        // Check if we've reached the end after skipping newlines
+        if (isAtEnd()) {
+            return nullptr;
+        }
+        
         // Standard declarations
         if (match(TokenType::LET) || match(TokenType::CONST)) {
             current--; // Back up to re-read the token
@@ -155,8 +165,15 @@ StatementPtr Parser::parseStatement() {
             return parseBlockStatement();
         }
         
-        // Default to expression statement
-        return parseExpressionStatement();
+        // Check for tokens that should not start an expression statement
+        if (check(TokenType::RIGHT_BRACE) || check(TokenType::EOF_TOKEN)) {
+            return nullptr;
+        }
+        
+        // Default to expression statement - parse an expression followed by semicolon
+        auto expr = parseExpression();
+        consume(TokenType::SEMICOLON, "Expected ';' after expression");
+        return std::make_unique<ExpressionStmt>(std::move(expr));
         
     } catch (const ParseError& e) {
         synchronize();
