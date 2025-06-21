@@ -21,7 +21,7 @@ namespace emlang {
  * @class LiteralExpression
  * @brief Represents literal values (numbers, strings, booleans, etc.)
  */
-class EMLANG_API LiteralExpr : public Expression {
+class LiteralExpr : public Expression {
 public:
     LiteralType literalType;    // Type of the literal
     std::string value;          // String representation of the value
@@ -36,7 +36,7 @@ public:
  * @class IdentifierExpression
  * @brief Represents identifier references (variables, functions)
  */
-class EMLANG_API IdentifierExpr : public Expression {
+class IdentifierExpr : public Expression {
 public:
     std::string name;    // Name of the identifier
     
@@ -50,7 +50,7 @@ public:
  * @class BinaryOpExpression
  * @brief Represents binary operations (arithmetic, logical, comparison)
  */
-class EMLANG_API BinaryOpExpr : public Expression {
+class BinaryOpExpr : public Expression {
 public:
     enum class BinOp {
         ADD, SUB, MUL, DIV, MOD,
@@ -72,7 +72,7 @@ public:
  * @class UnaryOpExpression
  * @brief Represents unary operations (negation, logical NOT, etc.)
  */
-class EMLANG_API UnaryOpExpr : public Expression {
+class UnaryOpExpr : public Expression {
 public:
     BinaryOpExpr::BinOp operator_;  // Operator symbol
     ExpressionPtr operand;          // Operand expression
@@ -87,7 +87,7 @@ public:
  * @class AssignmentExpression
  * @brief Represents assignment operations
  */
-class EMLANG_API AssignmentExpr : public Expression {
+class AssignmentExpr : public Expression {
 public:
     ExpressionPtr target;       // Left-hand side (target)
     ExpressionPtr value;        // Right-hand side (value)
@@ -103,7 +103,7 @@ public:
  * @brief Represents function call expressions
  * IMPLEMENT: FunctionCallExpr -> CallExpr
  */
-class EMLANG_API FunctionCallExpr : public Expression {
+class FunctionCallExpr : public Expression {
 public:
     //ExpressionPtr callee;                 // The function being called
     std::string functionName;               // Name of the function being called
@@ -128,7 +128,7 @@ public:
  * @class MemberExpression
  * @brief Represents member access operations (obj.member)
  */
-class EMLANG_API MemberExpr : public Expression {
+class MemberExpr : public Expression {
 public:
     ExpressionPtr object;       // Object being accessed
     std::string memberName;     // Name of the member
@@ -149,7 +149,7 @@ public:
  * @brief Represents type casting operations (expr as Type or cast<Type>(expr))
  */
 #ifdef EMLANG_FEATURE_CASTING
-class EMLANG_API CastExpr : public Expression {
+class CastExpr : public Expression {
 public:
     ExpressionPtr operand;      // Expression being cast
     std::string targetType;     // Target type name
@@ -174,7 +174,7 @@ public:
  * @class IndexExpression
  * @brief Represents array indexing operations (arr[index])
  */
-class EMLANG_API IndexExpr : public Expression {
+class IndexExpr : public Expression {
 public:
     ExpressionPtr array;        // Array expression
     ExpressionPtr index;        // Index expression
@@ -189,7 +189,7 @@ public:
  * @class ArrayExpression
  * @brief Represents array literals ([1, 2, 3])
  */
-class EMLANG_API ArrayExpr : public Expression {
+class ArrayExpr : public Expression {
 public:
     std::vector<ExpressionPtr> elements;    // Array elements
     
@@ -230,7 +230,7 @@ struct ObjectField {
  * @class ObjectExpression
  * @brief Represents object literals ({key: value})
  */
-class EMLANG_API ObjectExpr : public Expression {
+class ObjectExpr : public Expression {
 public:
     std::vector<ObjectField> fields;    // Object fields
     
@@ -253,7 +253,7 @@ public:
  * @class DereferenceExpression
  * @brief Represents pointer dereference operations (*ptr)
  */
-class EMLANG_API DereferenceExpr : public Expression {
+class DereferenceExpr : public Expression {
 public:
     ExpressionPtr operand;      // Expression being dereferenced
     
@@ -277,7 +277,7 @@ public:
  * 
  * IMPORTANT: Experimental Feature
  */
-class EMLANG_API AddressOfExpr : public Expression {
+class AddressOfExpr : public Expression {
 public:
     ExpressionPtr operand;      // Expression whose address is taken
     

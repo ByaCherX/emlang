@@ -21,7 +21,7 @@ namespace emlang {
  * @class BlockStatement
  * @brief Represents a block/compound statement containing multiple statements
  */
-class EMLANG_API BlockStmt : public Statement {
+class BlockStmt : public Statement {
 public:
     std::vector<StatementPtr> statements;   // Statements in this block
     
@@ -43,7 +43,7 @@ public:
  * @class IfStatement
  * @brief Represents conditional statements
  */
-class EMLANG_API IfStmt : public Statement {
+class IfStmt : public Statement {
 public:
     ExpressionPtr condition;    // Condition expression
     StatementPtr thenBranch;    // Statement to execute if condition is true
@@ -67,7 +67,7 @@ public:
  * @class WhileStatement
  * @brief Represents while loop statements
  */
-class EMLANG_API WhileStmt : public Statement {
+class WhileStmt : public Statement {
 public:
     ExpressionPtr condition;    // Loop condition
     StatementPtr body;          // Loop body
@@ -90,7 +90,7 @@ public:
  * @class ForStatement
  * @brief Represents for loop statements
  */
-class EMLANG_API ForStmt : public Statement {
+class ForStmt : public Statement {
 public:
     StatementPtr initializer;   // Loop initialization (optional)
     ExpressionPtr condition;    // Loop condition (optional)
@@ -115,7 +115,7 @@ public:
  * @class ReturnStatement
  * @brief Represents return statements
  */
-class EMLANG_API ReturnStmt : public Statement {
+class ReturnStmt : public Statement {
 public:
     ExpressionPtr value;        // Optional return value
     
@@ -137,7 +137,7 @@ public:
  * @class ExpressionStatement
  * @brief Represents expressions used as statements
  */
-class EMLANG_API ExpressionStmt : public Statement {
+class ExpressionStmt : public Statement {
 public:
     ExpressionPtr expression;   // The expression
     

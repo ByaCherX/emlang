@@ -56,17 +56,18 @@ enum class NodeType {
 #endif
     
     // Statement
-    IF_STMT,
-    WHILE_STMT,
-    FOR_STMT,
-    RETURN_STMT,
-    BLOCK_STMT,
-    EXPRESSION_STMT,
+    IF_STMT,         // If statements (if (condition) { ... })
+    SWITCH_STMT,     // Switch statements (switch (expr) { ... })
+    WHILE_STMT,      // While loops (while (condition) { ... })
+    FOR_STMT,        // For loops (for (init; condition; increment) { ... })
+    RETURN_STMT,     // Return statements (return expr;)
+    BLOCK_STMT,      // Block statements ({ ... })
+    EXPRESSION_STMT, // Expression statements (expr;)
 
     // Declarations
-    VARIABLE_DECL,
-    FUNCTION_DECL,
-    EXTERN_FN_DECL,
+    VARIABLE_DECL,   // Variable declarations (let x: int32 = 42;)
+    FUNCTION_DECL,   // Function declarations (function name(param1: type1): returnType { ... })
+    EXTERN_FN_DECL,  // External function declarations (extern function name(param1: type1): returnType;)
 #ifdef EMLANG_FEATURE_IMPORTS
     IMPORT_DECL,      // Import declaration (DO NOT IMPLEMENT YET)
 #endif
@@ -100,7 +101,7 @@ struct Parameter {
  * @class ASTNode
  * @brief Base class for all AST nodes
  */
-class EMLANG_API ASTNode {
+class ASTNode {
 public:
     NodeType type;     // Runtime type identification
     size_t line;       // Source code line number (1-based)
@@ -117,7 +118,7 @@ public:
  * @class Expression
  * @brief Base class for all expression nodes
  */
-class EMLANG_API Expression : public ASTNode {
+class Expression : public ASTNode {
 public:
     Expression(NodeType type, size_t line = 0, size_t column = 0);
     virtual ~Expression() = default;
@@ -127,7 +128,7 @@ public:
  * @class Statement
  * @brief Base class for all statement nodes
  */
-class EMLANG_API Statement : public ASTNode {
+class Statement : public ASTNode {
 public:
     Statement(NodeType type, size_t line = 0, size_t column = 0);
     virtual ~Statement() = default;
@@ -137,7 +138,7 @@ public:
  * @class Program
  * @brief Root AST node representing a complete program
  */
-class EMLANG_API Program : public ASTNode {
+class Program : public ASTNode {
 public:
     std::vector<StatementPtr> statements;
     
