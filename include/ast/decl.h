@@ -22,7 +22,7 @@ namespace emlang {
  * @class VariableDeclaration
  * @brief Represents variable declarations (let/const)
  */
-class EMLANG_API VariableDecl : public Statement {
+class VariableDecl : public Statement {
 public:
     std::string name;                // Variable name
     std::optional<std::string> type; // Variable type (optional)
@@ -53,7 +53,7 @@ public:
  * @brief Represents function declarations
  * IMPLEMENT: FunctionDecl -> FnDecl, combine with extern function decl
  */
-class EMLANG_API FunctionDecl : public Statement {
+class FunctionDecl : public Statement {
 public:
     std::string name;                      // Function name
     std::vector<Parameter> parameters;     // Function parameters
@@ -90,7 +90,7 @@ public:
  * @class ExternFunctionDeclaration
  * @brief Represents external function declarations
  */
-class EMLANG_API ExternFunctionDecl : public Statement {
+class ExternFunctionDecl : public Statement {
 public:
     std::string name;                   // Function name
     std::vector<Parameter> parameters;  // Function parameters

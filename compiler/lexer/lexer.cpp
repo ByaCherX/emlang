@@ -37,6 +37,7 @@ void Lexer::skipComment() {
         while (currentChar != '\0' && currentChar != '\n') {
             advance();
         }
+        // Don't advance past the newline - let the main tokenizer handle it
     } else if (currentChar == '/' && position + 1 < source.length() && source[position + 1] == '*') {
         // Multi-line comment
         advance(); // skip '/'

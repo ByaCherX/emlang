@@ -21,7 +21,7 @@ namespace emlang {
 class ASTNode;
 
 /// AST dumper for debug output with colored syntax highlighting
-class EMLANG_API ASTDumper : public ASTVisitor {
+class ASTDumper : public ASTVisitor {
 public:
     explicit ASTDumper(bool useColors = true);
     virtual ~ASTDumper() = default;

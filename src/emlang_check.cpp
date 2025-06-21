@@ -1,6 +1,7 @@
 #include "lexer.h"
-#include "parser.h"
+#include "parser/parser.h"
 #include "ast.h"
+#include "ast/dumper.h"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -8,7 +9,7 @@
 using namespace emlang;
 
 // AST writer visitor class
-class ASTPrinter : public ASTVisitor {
+/*class ASTPrinter : public ASTVisitor {
 private:
     int indent = 0;
     
@@ -46,6 +47,7 @@ public:
         indent--;
     }
     
+#ifdef EMLANG_FEATURE_POINTERS
     void visit(DereferenceExpr& node) override {
         printIndent();
         std::cout << "DereferenceExpr: *" << std::endl;
@@ -61,6 +63,7 @@ public:
         node.operand->accept(*this);
         indent--;
     }
+#endif // EMLANG_FEATURE_POINTERS
 
     void visit(AssignmentExpr& node) override {
         printIndent();
@@ -184,6 +187,7 @@ public:
         indent--;
     }
 };
+*/
 
 // Token printer function
 static void printTokens(const std::vector<Token>& tokens) {
@@ -282,7 +286,7 @@ int main(int argc, char* argv[]) {
         std::string source = readFile(options.inputFile);
         
         // Lexical Analysis
-        Lexer lexer(source);
+        emlang::Lexer lexer(source);
         auto tokens = lexer.tokenize();
         
         if (options.showTokens) {
@@ -291,7 +295,7 @@ int main(int argc, char* argv[]) {
         
         // Syntax Anylysis
         if (options.showAST) {
-            Parser parser(tokens);
+            emlang::Parser parser(tokens);
             auto ast = parser.parse();
             
             if (!ast) {
@@ -300,8 +304,8 @@ int main(int argc, char* argv[]) {
             }
             
             std::cout << "=== AST ===" << std::endl;
-            ASTPrinter printer;
-            ast->accept(printer);
+            emlang::ASTDumper dumper;
+            ast->accept(dumper);
             std::cout << std::endl;
         }
         

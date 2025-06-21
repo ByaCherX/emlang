@@ -50,7 +50,7 @@ class ExpressionStmt;
  * (semantic analysis, code generation, optimization) to be implemented as
  * separate visitors.
  */
-class EMLANG_API ASTVisitor {
+class ASTVisitor {
 public:
     virtual ~ASTVisitor() = default;
     
