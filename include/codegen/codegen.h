@@ -41,7 +41,6 @@
 #endif
 
 
-
 namespace emlang {
 namespace codegen {
 
@@ -55,6 +54,16 @@ namespace codegen {
  * error handling.
  */
 class EMLANG_API CodeGenerator : public ASTVisitor {
+private:
+    std::unique_ptr<codegen::LLVMContextManager> contextManager;
+    std::unique_ptr<codegen::ValueMap> valueMap;
+    std::unique_ptr<CodegenErrorReporter> errorReporter;
+
+    llvm::Value* currentValue;
+    std::string currentExpressionType;
+
+    llvm::Function* currentFunction;
+
 public:
     // ======================== CONSTRUCTION AND LIFECYCLE ========================
 
@@ -125,37 +134,46 @@ public:
      */
     bool hasErrors() const;
 
-    // ======================== AST VISITOR IMPLEMENTATION ========================
+    // ========================================================
+    // AST Visitor implementations
+    // ========================================================
+    // main entry point for AST traversal
+    void visit(Program& node) override;
 
+    // Expression visitors
     void visit(LiteralExpr& node) override;
     void visit(IdentifierExpr& node) override;
     void visit(BinaryOpExpr& node) override;
     void visit(UnaryOpExpr& node) override;
+    void visit(AssignmentExpr& node) override;
     void visit(FunctionCallExpr& node) override;
+    void visit(MemberExpr& node) override;
+#ifdef EMLANG_FEATURE_CASTING
+    void visit(CastExpr& node) override;
+#endif // EMLANG_FEATURE_CASTING
+    void visit(IndexExpr& node) override;
+    void visit(ArrayExpr& node) override;
+    void visit(ObjectExpr& node) override;
+#ifdef EMLANG_FEATURE_POINTERS
     void visit(DereferenceExpr& node) override;
     void visit(AddressOfExpr& node) override;
+#endif // EMLANG_FEATURE_POINTERS
+
+    // Declaration visitors
     void visit(VariableDecl& node) override;
     void visit(FunctionDecl& node) override;
     void visit(ExternFunctionDecl& node) override;
+
+    // Statement visitors
     void visit(BlockStmt& node) override;
     void visit(IfStmt& node) override;
     void visit(WhileStmt& node) override;
+    void visit(ForStmt& node) override;
     void visit(ReturnStmt& node) override;
     void visit(ExpressionStmt& node) override;
-    void visit(AssignmentExpr& node) override;
-    void visit(Program& node) override;
 
 private:
-    std::unique_ptr<codegen::LLVMContextManager> contextManager;
-    std::unique_ptr<ValueMap> valueMap;
-    std::unique_ptr<CodegenErrorReporter> errorReporter;
-
-    llvm::Value* currentValue;
-    std::string currentExpressionType;
-
-    llvm::Function* currentFunction;
-
-    // ======================== HELPER METHODS ========================
+    // ======================== ERROR HANDLING ========================
 
     /**
      * @brief Reports an error and sets currentValue to nullptr

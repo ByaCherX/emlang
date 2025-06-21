@@ -300,31 +300,7 @@ public:
 * Helper functions for expression creation
 ****************************************/
 /* BinOp to string method */
-std::string binOpToString(BinaryOpExpr::BinOp op) {
-    switch (op) {
-        case BinaryOpExpr::BinOp::ADD: return "+";
-        case BinaryOpExpr::BinOp::SUB: return "-";
-        case BinaryOpExpr::BinOp::MUL: return "*";
-        case BinaryOpExpr::BinOp::DIV: return "/";
-        case BinaryOpExpr::BinOp::MOD: return "%";
-        case BinaryOpExpr::BinOp::AND: return "&";
-        case BinaryOpExpr::BinOp::OR: return "|";
-        case BinaryOpExpr::BinOp::XOR: return "^";
-        case BinaryOpExpr::BinOp::INV: return "~";
-        case BinaryOpExpr::BinOp::SHL: return "<<";
-        case BinaryOpExpr::BinOp::SHR: return ">>";
-        case BinaryOpExpr::BinOp::EQ: return "==";
-        case BinaryOpExpr::BinOp::NE: return "!=";
-        case BinaryOpExpr::BinOp::LT: return "<";
-        case BinaryOpExpr::BinOp::LE: return "<=";
-        case BinaryOpExpr::BinOp::GT: return ">";
-        case BinaryOpExpr::BinOp::GE: return ">=";
-        case BinaryOpExpr::BinOp::LAND: return "&&";
-        case BinaryOpExpr::BinOp::LOR: return "||";
-        case BinaryOpExpr::BinOp::LNOT: return "!";
-    }
-    return "";
-}
+std::string binOpToString(BinaryOpExpr::BinOp op);
 
 } // namespace emlang
 
