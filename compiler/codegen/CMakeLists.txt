@@ -23,34 +23,22 @@ endif()
 # Codegen library source files
 set(CODEGEN_SOURCES
     # main codegen entry point
-    codegen.cpp
+    codegen.cpp   
+
+    # Core infrastructure
+    value_map.cpp
+    context.cpp
+    codegen_error.cpp
 
     # Code generation components
     CGBase.cpp
     CGExpr.cpp
     CGDecl.cpp
     CGStmt.cpp
-
-    # Core infrastructure
-    value_map.cpp
-    context.cpp
-    codegen_error.cpp
+    
+    # AOT backend
+    aot_compiler.cpp
     #target_config.cpp
-      
-    # LLVM OrcJIT v2 engine and layers
-    #jit_engine.cpp
-    #symbol_resolver.cpp
-        
-    # JIT compilation support
-    #module_manager.cpp
-    
-    # Advanced features
-    #target_manager.cpp
-    #memory_manager.cpp
-    #symbol_interposer.cpp
-    
-    # Final integration
-    #builtins_integration.cpp
 )
 
 set(CODEGEN_HEADERS
@@ -67,22 +55,13 @@ set(CODEGEN_HEADERS
     ${CMAKE_SOURCE_DIR}/include/codegen/value_map.h
     ${CMAKE_SOURCE_DIR}/include/codegen/context.h
     ${CMAKE_SOURCE_DIR}/include/codegen/codegen_error.h
-    #target_config.h
+    #${CMAKE_SOURCE_DIR}/include/codegen/target_config.h
     
-    # LLVM OrcJIT v2 engine and layers headers
-    #jit_engine.h
-    #symbol_resolver.h
+    # Backend headers
+    ${CMAKE_SOURCE_DIR}/include/codegen/aot_compiler.h
 
-    # JIT compilation support headers
-    #module_manager.h
-    
-    # Advanced features headers
-    #target_manager.h
-    #memory_manager.h
-    #symbol_interposer.h
-    
     # Final integration headers
-    #builtins_integration.h
+    #${CMAKE_SOURCE_DIR}/include/codegen/builtins_integration.h
 )
 
 # Create the codegen library
