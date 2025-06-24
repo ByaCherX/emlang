@@ -7,7 +7,7 @@
 // Implementation of error handling for EMLang code generation
 //===----------------------------------------------------------------------===//
 
-#include "../../include/codegen/codegen_error.h"
+#include "codegen/codegen_error.h"
 #include <iostream>
 #include <sstream>
 #include <map>
