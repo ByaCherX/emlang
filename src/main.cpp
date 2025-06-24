@@ -17,7 +17,6 @@
 #include <sstream>
 
 using namespace emlang;
-using emlang::codegen::OptimizationLevel;
 
 #define DEBUG_MODE 0
 
@@ -47,7 +46,6 @@ static void printUsage(const char* programName) {
 struct CompilerOptions {
     std::string inputFile;
     std::string outputFile;
-    OptimizationLevel optimizationLevel;
     bool emitLLVM = false;
     bool debug = false;
     bool showHelp = false;
@@ -68,11 +66,11 @@ static CompilerOptions parseArguments(int argc, char* argv[]) {
                 throw std::runtime_error("Option " + arg + " requires an argument");
             }
         } else if (arg == "-O1") {
-            options.optimizationLevel = OptimizationLevel::O1;
+            
         } else if (arg == "-O2") {
-            options.optimizationLevel = OptimizationLevel::O2;
+            
         } else if (arg == "-O3") {
-            options.optimizationLevel = OptimizationLevel::O3;
+            
         } else if (arg == "--emit-llvm") {
             options.emitLLVM = true;
         } else if (arg == "--debug") {
@@ -128,10 +126,6 @@ int main(int argc, char* argv[]) {
         
         std::cout << "Compiling: " << options.inputFile << std::endl;
         std::cout << "Output: " << options.outputFile << std::endl;
-        if (options.optimizationLevel > OptimizationLevel::None) {
-            std::cout << "Optimization Level: O" << static_cast<int>(options.optimizationLevel) << std::endl;
-        }
-        std::cout << std::endl;
         
         // Read source file
         std::string source = readFile(options.inputFile);
@@ -170,9 +164,7 @@ int main(int argc, char* argv[]) {
             std::cout << "=== CODE GENERATION ===" << std::endl;
         }
         
-        // Convert optimization level
-        OptimizationLevel optLevel = options.optimizationLevel;
-        emlang::codegen::CodeGenerator codegen("emlang_module", optLevel);
+        emlang::codegen::CodeGenerator codegen("emlang_module");
         codegen.generateIR(*ast);
         
         if (options.debug) {

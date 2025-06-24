@@ -1,29 +1,23 @@
-//===--- llvm_context.h - LLVM Context Management ---------------*- C++ -*-===//
+//===--- llvm_context.h - Context Management --------------------*- C++ -*-===//
 //
 // Part of the RNR Project, under the Apache License v2.0 with LLVM Exceptions.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// LLVM context management for EMLang code generation
+// context management for EMLang code generation
 //
-// This file contains the LLVM context management infrastructure,
+// This file contains the context management infrastructure,
 // including type mapping, module management, and optimization control.
 //===----------------------------------------------------------------------===//
 
-#ifndef EM_CODEGEN_LLVM_CONTEXT_H
-#define EM_CODEGEN_LLVM_CONTEXT_H
+#ifndef EM_CODEGEN_CONTEXT_H
+#define EM_CODEGEN_CONTEXT_H
 
 #pragma once
 
 #include <emlang_export.h>
-
-// Disable LLVM warnings
-#ifdef _MSC_VER
-    #pragma warning(push)
-    #pragma warning(disable: 4624) // destructor was implicitly deleted
-    #pragma warning(disable: 4244) // conversion warnings
-    #pragma warning(disable: 4267) // size_t conversion warnings
-#endif
+#include <memory>
+#include <string>
 
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
@@ -32,43 +26,23 @@
 #include <llvm/IR/Type.h>
 #include <llvm/IR/Function.h>
 
-// Re-enable warnings
-#ifdef _MSC_VER
-    #pragma warning(pop)
-#endif
-
-#include <memory>
-#include <string>
 
 namespace emlang {
 namespace codegen {
 
 /**
- * @enum OptimizationLevel
- * @brief Defines optimization levels for code generation
- */
-enum class OptimizationLevel {
-    None = 0x0,      ///< No optimizations applied (O0)
-    O1   = 0x1,      ///< Basic optimizations (-O1)
-    O2   = 0x2,      ///< Standard optimizations (-O2) 
-    O3   = 0x3       ///< Aggressive optimizations (-O3)
-};
-
-/**
- * @class LLVMContextManager
+ * @class ContextManager
  * @brief Manages LLVM context, module, and type mapping
  * 
- * LLVMContextManager encapsulates LLVM's core infrastructure
+ * ContextManager encapsulates LLVM's core infrastructure
  * and provides type mapping between EMLang and LLVM types.
  * It manages the LLVM context, module, and IR builder lifecycle.
  */
-class EMLANG_API LLVMContextManager {
+class EMLANG_API ContextManager {
 private:
     std::unique_ptr<llvm::LLVMContext> context;  ///< LLVM context managing global state
     std::unique_ptr<llvm::Module> module;        ///< LLVM module containing all generated functions and globals
     std::unique_ptr<llvm::IRBuilder<>> builder;  ///< LLVM IR builder for convenient instruction generation
-
-    OptimizationLevel optimizationLevel;         ///< Current optimization level
 
     // ======================== INITIALIZATION HELPERS ========================
 
@@ -81,12 +55,12 @@ public:
      * @param moduleName Name for the LLVM module
      * @param optLevel Optimization level
      */
-    LLVMContextManager(const std::string& moduleName, OptimizationLevel optLevel = OptimizationLevel::None);
+    ContextManager(const std::string& moduleName);
 
     /**
      * @brief Default destructor
      */
-    ~LLVMContextManager() = default;
+    ~ContextManager() = default;
 
     // ======================== LLVM COMPONENT ACCESS ========================
 
@@ -122,18 +96,6 @@ public:
     // ======================== OPTIMIZATION CONTROL ========================
 
     /**
-     * @brief Sets the optimization level
-     * @param level New optimization level
-     */
-    void setOptimizationLevel(OptimizationLevel level);
-
-    /**
-     * @brief Gets the current optimization level
-     * @return Current optimization level
-     */
-    OptimizationLevel getOptimizationLevel() const;
-
-    /**
      * @brief Applies optimization passes based on current level
      */
     void runOptimizationPasses();
@@ -156,12 +118,6 @@ public:
      * @param filename Output object file path
      */
     void writeObjectFile(const std::string& filename) const;
-
-    /**
-     * @brief JIT compiles and executes main function
-     * @return Exit code from main function
-     */
-    int executeMain();
 
 };
 

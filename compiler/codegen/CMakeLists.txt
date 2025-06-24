@@ -23,54 +23,45 @@ endif()
 # Codegen library source files
 set(CODEGEN_SOURCES
     # main codegen entry point
-    codegen.cpp
+    codegen.cpp   
 
     # Core infrastructure
     value_map.cpp
-    llvm_context.cpp
+    context.cpp
     codegen_error.cpp
+
+    # Code generation components
+    CGBase.cpp
+    CGExpr.cpp
+    CGDecl.cpp
+    CGStmt.cpp
+    
+    # AOT backend
+    aot_compiler.cpp
     #target_config.cpp
-      
-    # LLVM OrcJIT v2 engine and layers
-    #jit_engine.cpp
-    #symbol_resolver.cpp
-        
-    # JIT compilation support
-    #module_manager.cpp
-    
-    # Advanced features
-    #target_manager.cpp
-    #memory_manager.cpp
-    #symbol_interposer.cpp
-    
-    # Final integration
-    #builtins_integration.cpp
 )
 
 set(CODEGEN_HEADERS
     # main codegen header
     ${CMAKE_SOURCE_DIR}/include/codegen/codegen.h
 
+    # Code generation components
+    ${CMAKE_SOURCE_DIR}/include/codegen/CGBase.h
+    ${CMAKE_SOURCE_DIR}/include/codegen/CGExpr.h
+    ${CMAKE_SOURCE_DIR}/include/codegen/CGDecl.h
+    ${CMAKE_SOURCE_DIR}/include/codegen/CGStmt.h
+
     # Core infrastructure headers
     ${CMAKE_SOURCE_DIR}/include/codegen/value_map.h
-    ${CMAKE_SOURCE_DIR}/include/codegen/llvm_context.h
+    ${CMAKE_SOURCE_DIR}/include/codegen/context.h
     ${CMAKE_SOURCE_DIR}/include/codegen/codegen_error.h
-    #target_config.h
+    #${CMAKE_SOURCE_DIR}/include/codegen/target_config.h
     
-    # LLVM OrcJIT v2 engine and layers headers
-    #jit_engine.h
-    #symbol_resolver.h
+    # Backend headers
+    ${CMAKE_SOURCE_DIR}/include/codegen/aot_compiler.h
 
-    # JIT compilation support headers
-    #module_manager.h
-    
-    # Advanced features headers
-    #target_manager.h
-    #memory_manager.h
-    #symbol_interposer.h
-    
     # Final integration headers
-    #builtins_integration.h
+    #${CMAKE_SOURCE_DIR}/include/codegen/builtins_integration.h
 )
 
 # Create the codegen library

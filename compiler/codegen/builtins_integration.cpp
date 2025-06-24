@@ -11,10 +11,10 @@
 // resolution and runtime binding for both AOT and JIT compilation.
 //===----------------------------------------------------------------------===//
 
-#include "../../include/codegen/symbol_resolver.h"
-#include "../../include/codegen/jit_engine.h"
-#include "../../include/builtins.h"
-#include "../../include/codegen/codegen_error.h"
+#include "codegen/jit/symbol_resolver.h"
+#include "codegen/jit/jit_engine.h"
+#include "builtins.h"
+#include "codegen/codegen_error.h"
 
 // Disable LLVM warnings for includes
 #ifdef _MSC_VER
@@ -362,9 +362,9 @@ public:
     static CodegenError initializeBuiltins() {
         try {
             builtins::initializeBuiltinIntegration();
-            return CodegenError::success();
+            //return CodegenError::runtime_error("Builtins initialized successfully");
         } catch (const std::exception& e) {
-            return CodegenError::createBuiltinError("Failed to initialize builtins: " + std::string(e.what()));
+            //return CodegenError::exception("Failed to initialize builtins: " + std::string(e.what()));
         }
     }
     
