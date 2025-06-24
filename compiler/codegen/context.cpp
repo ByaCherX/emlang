@@ -50,11 +50,10 @@ namespace codegen {
 
 // ======================== CONSTRUCTION ========================
 
-ContextManager::ContextManager(const std::string& moduleName, OptimizationLevel optLevel)
+ContextManager::ContextManager(const std::string& moduleName)
     : context(std::make_unique<llvm::LLVMContext>()),
       module(std::make_unique<llvm::Module>(moduleName, *context)),
-      builder(std::make_unique<llvm::IRBuilder<>>(*context)),
-      optimizationLevel(optLevel) {
+      builder(std::make_unique<llvm::IRBuilder<>>(*context)) {
     
     initializeTargets();
     registerBuiltinFunctions();
@@ -71,58 +70,8 @@ llvm::Value* ContextManager::createEntryBlockAlloca(llvm::Function* function,
 
 // ======================== OPTIMIZATION CONTROL ========================
 
-void ContextManager::setOptimizationLevel(OptimizationLevel level) {
-    optimizationLevel = level;
-}
-
-OptimizationLevel ContextManager::getOptimizationLevel() const {
-    return optimizationLevel;
-}
-
 void ContextManager::runOptimizationPasses() {
-    if (optimizationLevel == OptimizationLevel::None) {
-        return; // No optimizations
-    }
-    
-    // Create a legacy pass manager for function passes
-    auto functionPassManager = std::make_unique<llvm::legacy::FunctionPassManager>(module.get());
-    
-    // Add optimization passes based on level
-    switch (optimizationLevel) {
-        case OptimizationLevel::O1:
-            functionPassManager->add(llvm::createPromoteMemoryToRegisterPass());
-            functionPassManager->add(llvm::createInstructionCombiningPass());
-            functionPassManager->add(llvm::createReassociatePass());
-            break;
-        case OptimizationLevel::O2:
-            functionPassManager->add(llvm::createPromoteMemoryToRegisterPass());
-            functionPassManager->add(llvm::createInstructionCombiningPass());
-            functionPassManager->add(llvm::createReassociatePass());
-            // Note: GVN and other passes moved to new pass manager in LLVM 20.1.0
-            functionPassManager->add(llvm::createCFGSimplificationPass());
-            break;
-            
-        case OptimizationLevel::O3:
-            functionPassManager->add(llvm::createPromoteMemoryToRegisterPass());
-            functionPassManager->add(llvm::createInstructionCombiningPass());
-            functionPassManager->add(llvm::createReassociatePass());
-            // Note: GVN and aggressive DCE passes moved to new pass manager
-            functionPassManager->add(llvm::createCFGSimplificationPass());
-            functionPassManager->add(llvm::createTailCallEliminationPass());
-            break;
-            
-        default:
-            break;
-    }
-    
-    functionPassManager->doInitialization();
-    
-    // Run passes on all functions
-    for (auto& function : *module) {
-        functionPassManager->run(function);
-    }
-    
-    functionPassManager->doFinalization();
+    throw std::runtime_error("Optimization passes are not supported in ContextManager.");
 }
 
 // ======================== OUTPUT GENERATION ========================

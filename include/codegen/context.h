@@ -31,17 +31,6 @@ namespace emlang {
 namespace codegen {
 
 /**
- * @enum OptimizationLevel
- * @brief Defines optimization levels for code generation
- */
-enum class OptimizationLevel {
-    None = 0x0,      ///< No optimizations applied (O0)
-    O1   = 0x1,      ///< Basic optimizations (-O1)
-    O2   = 0x2,      ///< Standard optimizations (-O2) 
-    O3   = 0x3       ///< Aggressive optimizations (-O3)
-};
-
-/**
  * @class ContextManager
  * @brief Manages LLVM context, module, and type mapping
  * 
@@ -55,8 +44,6 @@ private:
     std::unique_ptr<llvm::Module> module;        ///< LLVM module containing all generated functions and globals
     std::unique_ptr<llvm::IRBuilder<>> builder;  ///< LLVM IR builder for convenient instruction generation
 
-    OptimizationLevel optimizationLevel;         ///< Current optimization level
-
     // ======================== INITIALIZATION HELPERS ========================
 
     void initializeTargets();                    ///< Initializes target-specific components
@@ -68,7 +55,7 @@ public:
      * @param moduleName Name for the LLVM module
      * @param optLevel Optimization level
      */
-    ContextManager(const std::string& moduleName, OptimizationLevel optLevel = OptimizationLevel::None);
+    ContextManager(const std::string& moduleName);
 
     /**
      * @brief Default destructor
@@ -107,18 +94,6 @@ public:
     llvm::Value* createEntryBlockAlloca(llvm::Function* function, const std::string& varName, llvm::Type* type);
 
     // ======================== OPTIMIZATION CONTROL ========================
-
-    /**
-     * @brief Sets the optimization level
-     * @param level New optimization level
-     */
-    void setOptimizationLevel(OptimizationLevel level);
-
-    /**
-     * @brief Gets the current optimization level
-     * @return Current optimization level
-     */
-    OptimizationLevel getOptimizationLevel() const;
 
     /**
      * @brief Applies optimization passes based on current level
