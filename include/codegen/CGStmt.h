@@ -16,28 +16,15 @@
 #pragma once
 
 #include <emlang_export.h>
+#include "CGBase.h"
 #include "context.h"
 #include "value_map.h"
 #include "codegen_error.h"
-
-// Disable LLVM warnings
-#ifdef _MSC_VER
-    #pragma warning(push)
-    #pragma warning(disable: 4624) // destructor was implicitly deleted
-    #pragma warning(disable: 4244) // conversion warnings
-    #pragma warning(disable: 4267) // size_t conversion warnings
-#endif
+#include <memory>
+#include <string>
 
 #include <llvm/IR/Value.h>
 #include <llvm/IR/BasicBlock.h>
-
-// Re-enable warnings
-#ifdef _MSC_VER
-    #pragma warning(pop)
-#endif
-
-#include <memory>
-#include <string>
 
 namespace emlang {
 
@@ -56,25 +43,19 @@ class CGExpr;
 
 /**
  * @class CGStmt
- * @brief Code generator for statement AST nodes
+ * @brief Statement code generator implementing visitor pattern
  * 
- * CGStmt handles the conversion of all statement AST nodes to LLVM IR.
- * It manages control flow, block statements, conditional statements,
- * loops, and return statements while maintaining proper basic block
- * organization.
+ * CGStmt handles the conversion of all statement AST nodes to LLVM IR
+ * by implementing the visitor pattern. It inherits from CGBase and overrides
+ * only the statement-related visitor methods.
  */
-class EMLANG_API CGStmt {
+class CGStmt : public CGBase {
 private:
-    ContextManager& contextManager;
-    ValueMap& valueMap;
-    CodegenErrorReporter& errorReporter;
     CGExpr& exprGenerator;
-
-    llvm::Value* currentValue;
     llvm::BasicBlock* currentBlock;
 
 public:
-    // ======================== CONSTRUCTION ========================
+    /******************** Construction ********************/
 
     /**
      * @brief Constructs a new CGStmt instance
@@ -90,7 +71,32 @@ public:
      */
     ~CGStmt() = default;
 
-    // ======================== STATEMENT GENERATION ========================
+    /******************** Visitor ********************/
+
+    // Statement visitors - full implementations
+    void visit(BlockStmt& node) override;
+    void visit(IfStmt& node) override;
+    void visit(WhileStmt& node) override;
+    void visit(ForStmt& node) override;
+    void visit(ReturnStmt& node) override;
+    void visit(ExpressionStmt& node) override;
+
+    /******************** Utility Methods ********************/
+
+    /**
+     * @brief Gets the current basic block
+     * @return Current LLVM basic block
+     */
+    llvm::BasicBlock* getCurrentBlock() const { return currentBlock; }
+
+    /**
+     * @brief Sets the current basic block
+     * @param block LLVM basic block to set as current
+     */
+    void setCurrentBlock(llvm::BasicBlock* block) { currentBlock = block; }
+
+private:
+    /******************** Generation Methods ********************/
 
     /**
      * @brief Generates LLVM IR for a block statement
@@ -134,34 +140,7 @@ public:
      */
     llvm::Value* generateExpressionStmt(ExpressionStmt& node);
 
-    // ======================== UTILITY METHODS ========================
-
-    /**
-     * @brief Gets the current generated value
-     * @return Current LLVM value
-     */
-    llvm::Value* getCurrentValue() const { return currentValue; }
-
-    /**
-     * @brief Gets the current basic block
-     * @return Current LLVM basic block
-     */
-    llvm::BasicBlock* getCurrentBlock() const { return currentBlock; }
-
-    /**
-     * @brief Sets the current basic block
-     * @param block LLVM basic block to set as current
-     */
-    void setCurrentBlock(llvm::BasicBlock* block) { currentBlock = block; }
-
-    /**
-     * @brief Sets the current value
-     * @param value LLVM value to set
-     */
-    void setCurrentValue(llvm::Value* value) { currentValue = value; }
-
-private:
-    // ======================== HELPER METHODS ========================
+    /******************** Helper Methods ********************/
 
     /**
      * @brief Creates a new basic block in the current function
@@ -182,22 +161,6 @@ private:
      * @return true if valid, false otherwise
      */
     bool validateCondition(llvm::Value* conditionValue);
-
-    // ======================== ERROR HANDLING ========================
-
-    /**
-     * @brief Reports an error and sets currentValue to nullptr
-     * @param message Error message
-     */
-    void error(const std::string& message);
-
-    /**
-     * @brief Reports a typed error with context
-     * @param type Error type
-     * @param message Error message
-     * @param context Optional context
-     */
-    void error(CodegenErrorType type, const std::string& message, const std::string& context = "");
 };
 
 } // namespace codegen

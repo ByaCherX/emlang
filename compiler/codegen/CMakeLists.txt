@@ -26,6 +26,7 @@ set(CODEGEN_SOURCES
     codegen.cpp
 
     # Code generation components
+    CGBase.cpp
     CGExpr.cpp
     CGDecl.cpp
     CGStmt.cpp
@@ -57,6 +58,7 @@ set(CODEGEN_HEADERS
     ${CMAKE_SOURCE_DIR}/include/codegen/codegen.h
 
     # Code generation components
+    ${CMAKE_SOURCE_DIR}/include/codegen/CGBase.h
     ${CMAKE_SOURCE_DIR}/include/codegen/CGExpr.h
     ${CMAKE_SOURCE_DIR}/include/codegen/CGDecl.h
     ${CMAKE_SOURCE_DIR}/include/codegen/CGStmt.h

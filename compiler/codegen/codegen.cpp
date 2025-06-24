@@ -8,6 +8,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "codegen/codegen.h"
+// Backend includes temporarily disabled until implementation is complete
+// #include "codegen/aot_compiler.h"
+// #include "codegen/jit/jit_engine.h"
 #include "ast.h"
 
 #include <llvm/IR/Verifier.h>
@@ -29,17 +32,29 @@ namespace codegen {
 * CONSTRUCTION AND LIFECYCLE
 ******************************/
 
-CodeGenerator::CodeGenerator(const std::string& moduleName, OptimizationLevel optLevel) 
+CodeGenerator::CodeGenerator(const std::string& moduleName) 
     : currentValue(nullptr) {
     // Initialize modular components
-    contextManager = std::make_unique<ContextManager>(moduleName, optLevel);
-    valueMap = std::make_unique<ValueMap>();
-    errorReporter = std::make_unique<CodegenErrorReporter>();
+    contextManager   = std::make_unique<ContextManager>(moduleName);
+    valueMap         = std::make_unique<ValueMap>();
+    errorReporter    = std::make_unique<CodegenErrorReporter>();
     
     // Initialize code generation components
-    exprGenerator = std::make_unique<CGExpr>(*contextManager, *valueMap, *errorReporter);
-    declGenerator = std::make_unique<CGDecl>(*contextManager, *valueMap, *errorReporter);
-    stmtGenerator = std::make_unique<CGStmt>(*contextManager, *valueMap, *errorReporter, *exprGenerator);
+    exprGenerator    = std::make_unique<CGExpr>(*contextManager, *valueMap, *errorReporter);
+    declGenerator    = std::make_unique<CGDecl>(*contextManager, *valueMap, *errorReporter);
+    stmtGenerator    = std::make_unique<CGStmt>(*contextManager, *valueMap, *errorReporter, *exprGenerator);    
+    
+    // Initialize program orchestrator with specialized visitors
+    programGenerator = std::make_unique<CGBase>(
+        *contextManager, 
+        *valueMap, 
+        *errorReporter, 
+        exprGenerator.get(), declGenerator.get(), stmtGenerator.get()
+    );
+    
+    // Initialize backends - TODO: Implement backends fully
+    // AOT backend temporarily disabled until implementation is complete
+    // initializeAOTBackend();
     
     currentFunction = nullptr;
     currentExpressionType.clear();
@@ -54,49 +69,21 @@ void CodeGenerator::generateIR(Program& program) {
     // BuiltinsIntegration builtins(*contextManager, *valueMap);
     // builtins.registerBuiltinFunctions();
     
-    // Process all statements in the program
-    for (auto& stmt : program.statements) {
-        // Route to appropriate generator based on AST node type
-        if (auto funcDecl = dynamic_cast<FunctionDecl*>(stmt.get())) {
-            declGenerator->generateFunctionDecl(*funcDecl);
-        }
-        else if (auto externDecl = dynamic_cast<ExternFunctionDecl*>(stmt.get())) {
-            declGenerator->generateExternFunctionDecl(*externDecl);
-        }
-        else if (auto varDecl = dynamic_cast<VariableDecl*>(stmt.get())) {
-            declGenerator->generateVariableDecl(*varDecl);
-        }
-        else if (auto blockStmt = dynamic_cast<BlockStmt*>(stmt.get())) {
-            stmtGenerator->generateBlock(*blockStmt);
-        }
-        else if (auto ifStmt = dynamic_cast<IfStmt*>(stmt.get())) {
-            stmtGenerator->generateIf(*ifStmt);
-        }
-        else if (auto whileStmt = dynamic_cast<WhileStmt*>(stmt.get())) {
-            stmtGenerator->generateWhile(*whileStmt);
-        }
-        else if (auto forStmt = dynamic_cast<ForStmt*>(stmt.get())) {
-            stmtGenerator->generateFor(*forStmt);
-        }
-        else if (auto returnStmt = dynamic_cast<ReturnStmt*>(stmt.get())) {
-            stmtGenerator->generateReturn(*returnStmt);
-        }
-        else if (auto exprStmt = dynamic_cast<ExpressionStmt*>(stmt.get())) {
-            stmtGenerator->generateExpressionStmt(*exprStmt);
-        }
-        else {
-            error(CodegenErrorType::InternalError, "Unsupported statement type in program");
-        }
-    }
+    // Use the program orchestrator to generate IR using visitor pattern
+    program.accept(*programGenerator);
     
     // Run optimization passes if requested
-    if (contextManager->getOptimizationLevel() != OptimizationLevel::None) {
-        contextManager->runOptimizationPasses();
-    }
+    contextManager->runOptimizationPasses();
     
     // Verify the module - simplified approach
     if (llvm::verifyModule(*contextManager->getModule(), &llvm::errs())) {
-        error(CodegenErrorType::InternalError, "Module verification failed");
+        errorReporter->error(CodegenErrorType::InternalError, "Module verification failed");
+        return;
+    }
+    
+    // Prepare module for backend processing
+    if (!prepareModuleForBackend()) {
+        errorReporter->error(CodegenErrorType::InternalError, "Failed to prepare module for backend");
     }
 }
 
@@ -111,8 +98,8 @@ void CodeGenerator::printIR() const {
 void CodeGenerator::writeCodeToFile(const std::string& filename, bool emitLLVM) {
     if (emitLLVM) {
         contextManager->writeIRToFile(filename);
-    }
-    else {
+    }    else {
+        // Use fallback to context manager's writeObjectFile
         contextManager->writeObjectFile(filename);
     }
 }
@@ -132,6 +119,50 @@ void CodeGenerator::error(const std::string& message) {
 void CodeGenerator::error(CodegenErrorType type, const std::string& message, const std::string& context) {
     errorReporter->error(type, message, context);
     currentValue = nullptr;
+}
+
+/******************************
+* BACKEND MANAGEMENT
+******************************/
+
+bool CodeGenerator::compileAOT(const std::string& outputPath) {
+    // AOT backend temporarily disabled until implementation is complete
+    error("AOT backend is currently disabled (implementation in progress)");
+    return false;
+}
+
+bool CodeGenerator::initializeJIT() {
+    // JIT is experimental and disabled for now
+    error("JIT backend is currently disabled (experimental feature)");
+    return false;
+}
+
+/******************************
+* BACKEND HELPERS
+******************************/
+
+bool CodeGenerator::initializeAOTBackend() {
+    // AOT backend temporarily disabled until implementation is complete
+    error("AOT backend initialization is currently disabled");
+    return false;
+}
+
+bool CodeGenerator::prepareModuleForBackend() {
+    auto* module = contextManager->getModule();
+    if (!module) {
+        return false;
+    }
+    
+    // Verify module before backend processing
+    if (llvm::verifyModule(*module, &llvm::errs())) {
+        error("Module verification failed during backend preparation");
+        return false;
+    }
+    
+    // Additional preparation steps could be added here
+    // For example: symbol resolution, metadata generation, etc.
+    
+    return true;
 }
 
 } // namespace codegen

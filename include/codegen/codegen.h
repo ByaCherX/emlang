@@ -17,13 +17,17 @@
 
 #include <emlang_export.h>
 #include "ast.h"
-#include "value_map.h"
 #include "context.h"
+#include "value_map.h"
 #include "codegen_error.h"
 #include "builtins_integration.h"
 #include "CGExpr.h"
 #include "CGDecl.h"
 #include "CGStmt.h"
+#include "CGBase.h"
+// Backend includes temporarily disabled until implementation is complete  
+// #include "aot_compiler.h"
+// #include "jit/jit_engine.h"
 #include <memory>
 #include <string>
 
@@ -66,6 +70,11 @@ private:
     std::unique_ptr<CGExpr> exprGenerator;
     std::unique_ptr<CGDecl> declGenerator;
     std::unique_ptr<CGStmt> stmtGenerator;
+    std::unique_ptr<CGBase> programGenerator;    
+      
+    // Backend components - temporarily disabled until implementation is complete
+    // std::unique_ptr<AOTCompiler> aotBackend;
+    // std::unique_ptr<jit::JITEngine> jitBackend;
 
     llvm::Value* currentValue;
     std::string currentExpressionType;
@@ -80,7 +89,7 @@ public:
      * @param moduleName Name for the LLVM module
      * @param optLevel Optimization level to apply
      */
-    CodeGenerator(const std::string& moduleName, codegen::OptimizationLevel optLevel = codegen::OptimizationLevel::None);
+    CodeGenerator(const std::string& moduleName);
 
     /**
      * @brief Default destructor
@@ -120,7 +129,20 @@ public:
      * The generated object files can be linked with standard system linkers
      * to create executable programs or shared libraries.
      */
-    void writeCodeToFile(const std::string& filename, bool emitLLVM = false);
+    void writeCodeToFile(const std::string& filename, bool emitLLVM = false);    
+    
+    // ======================== BACKEND MANAGEMENT ========================
+    // Backend functionality temporarily disabled until implementation is complete
+
+    /**
+     * @brief Compiles using AOT backend (temporarily disabled)
+     */
+    bool compileAOT(const std::string& outputPath);
+
+    /**
+     * @brief Initializes JIT backend (temporarily disabled)
+     */
+    bool initializeJIT();
 
     // ======================== ERROR HANDLING ========================
 
@@ -184,6 +206,20 @@ private:
      * @param context Optional context
      */
     void error(CodegenErrorType type, const std::string& message, const std::string& context = "");
+
+    // ======================== BACKEND HELPERS ========================
+
+    /**
+     * @brief Initializes AOT backend
+     * @return true if initialization succeeded
+     */
+    bool initializeAOTBackend();
+
+    /**
+     * @brief Ensures module is ready for backend processing
+     * @return true if module is valid
+     */
+    bool prepareModuleForBackend();
 };
 
 } // namespace codegen

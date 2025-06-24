@@ -16,28 +16,16 @@
 #pragma once
 
 #include <emlang_export.h>
+#include "CGBase.h"
 #include "context.h"
 #include "value_map.h"
 #include "codegen_error.h"
-
-// Disable LLVM warnings
-#ifdef _MSC_VER
-    #pragma warning(push)
-    #pragma warning(disable: 4624) // destructor was implicitly deleted
-    #pragma warning(disable: 4244) // conversion warnings
-    #pragma warning(disable: 4267) // size_t conversion warnings
-#endif
+#include <memory>
+#include <string>
 
 #include <llvm/IR/Value.h>
 #include <llvm/IR/Function.h>
 
-// Re-enable warnings
-#ifdef _MSC_VER
-    #pragma warning(pop)
-#endif
-
-#include <memory>
-#include <string>
 
 namespace emlang {
 
@@ -50,23 +38,19 @@ namespace codegen {
 
 /**
  * @class CGDecl
- * @brief Code generator for declaration AST nodes
+ * @brief Declaration code generator implementing visitor pattern
  * 
- * CGDecl handles the conversion of all declaration AST nodes to LLVM IR.
- * It manages variable declarations, function declarations, external function
- * declarations, and maintains proper symbol table integration.
+ * CGDecl handles the conversion of all declaration AST nodes to LLVM IR
+ * by implementing the visitor pattern. It inherits from CGBase and overrides
+ * only the declaration-related visitor methods.
  */
-class EMLANG_API CGDecl {
+class CGDecl : public CGBase {
 private:
-    ContextManager& contextManager;
-    ValueMap& valueMap;
-    CodegenErrorReporter& errorReporter;
-
-    llvm::Value* currentValue;
     llvm::Function* currentFunction;
+    std::string currentExpressionType; // Tracks the type of the current expression
 
 public:
-    // ======================== CONSTRUCTION ========================
+    /******************** Constructor ********************/
 
     /**
      * @brief Constructs a new CGDecl instance
@@ -81,7 +65,36 @@ public:
      */
     ~CGDecl() = default;
 
-    // ======================== DECLARATION GENERATION ========================
+    /******************** Visitor ********************/
+
+    // Declaration visitors - full implementations
+    void visit(VariableDecl& node) override;
+    void visit(FunctionDecl& node) override;
+    void visit(ExternFunctionDecl& node) override;
+
+    /******************** Utility Methods ********************/
+
+    /**
+     * @brief Gets the current function being processed
+     * @return Current LLVM function
+     */
+    llvm::Function* getCurrentFunction() const { return currentFunction; }
+
+    /**
+     * @brief Sets the current function
+     * @param function LLVM function to set as current
+     */
+    void setCurrentFunction(llvm::Function* function) { currentFunction = function; }
+
+    /**
+     * @brief Sets the current value and type
+     * @param value LLVM value to set
+     * @param type Expression type to set
+     */
+    void setCurrentValue(llvm::Value* value, const std::string& type) override;
+
+private:
+    /******************** Generation Methods ********************/
 
     /**
      * @brief Generates LLVM IR for a variable declaration
@@ -104,34 +117,7 @@ public:
      */
     llvm::Function* generateExternFunctionDecl(ExternFunctionDecl& node);
 
-    // ======================== UTILITY METHODS ========================
-
-    /**
-     * @brief Gets the current generated value
-     * @return Current LLVM value
-     */
-    llvm::Value* getCurrentValue() const { return currentValue; }
-
-    /**
-     * @brief Gets the current function being processed
-     * @return Current LLVM function
-     */
-    llvm::Function* getCurrentFunction() const { return currentFunction; }
-
-    /**
-     * @brief Sets the current function
-     * @param function LLVM function to set as current
-     */
-    void setCurrentFunction(llvm::Function* function) { currentFunction = function; }
-
-    /**
-     * @brief Sets the current value
-     * @param value LLVM value to set
-     */
-    void setCurrentValue(llvm::Value* value) { currentValue = value; }
-
-private:
-    // ======================== HELPER METHODS ========================
+    /******************** Helper Methods ********************/
 
     /**
      * @brief Creates function parameters and adds them to the value map
@@ -153,22 +139,6 @@ private:
      * @return true if valid, false otherwise
      */
     bool validateExternFunctionDecl(ExternFunctionDecl& node);
-
-    // ======================== ERROR HANDLING ========================
-
-    /**
-     * @brief Reports an error and sets currentValue to nullptr
-     * @param message Error message
-     */
-    void error(const std::string& message);
-
-    /**
-     * @brief Reports a typed error with context
-     * @param type Error type
-     * @param message Error message
-     * @param context Optional context
-     */
-    void error(CodegenErrorType type, const std::string& message, const std::string& context = "");
 };
 
 } // namespace codegen
