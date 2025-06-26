@@ -174,7 +174,7 @@ bool CodeGenerator::initializeAOTBackend() {
         error("AOT backend initialization failed: " + ::emlang::codegen::toString(std::move(err)));
         return false;
     }
-    
+
     return true;
 }
 
