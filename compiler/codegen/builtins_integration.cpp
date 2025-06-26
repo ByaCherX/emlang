@@ -45,7 +45,7 @@
 
 namespace emlang {
 
-// ======================== BUILTIN FUNCTION IMPLEMENTATIONS ========================
+/******************** BUILTIN FUNCTION IMPLEMENTATIONS ********************/
 
 // External C-style implementations for builtin functions
 extern "C" {
@@ -146,7 +146,7 @@ extern "C" {
     }
 }
 
-// ======================== BUILTIN INTEGRATION MANAGER ========================
+/******************** BUILTIN INTEGRATION MANAGER ********************/
 
 /**
  * @class BuiltinIntegrationManager
@@ -226,7 +226,7 @@ public:
 // Global instance
 static BuiltinIntegrationManager g_builtinManager;
 
-// ======================== PUBLIC INTEGRATION API ========================
+/******************** PUBLIC INTEGRATION API ********************/
 
 namespace builtins {
 
@@ -327,7 +327,7 @@ llvm::Type* getBuiltinFunctionType(const std::string& name, llvm::LLVMContext& c
 
 } // namespace builtins
 
-// ======================== LEGACY COMPATIBILITY ========================
+/******************** LEGACY COMPATIBILITY ********************/
 
 // Provide backward compatibility with existing builtin system
 namespace {
@@ -350,7 +350,7 @@ public:
 
 } // anonymous namespace
 
-// ======================== INTEGRATION WITH CODEGEN ========================
+/******************** INTEGRATION WITH CODEGEN ********************/
 
 namespace codegen {
 
@@ -423,7 +423,7 @@ public:
 
 } // namespace emlang
 
-// ======================== C API COMPATIBILITY ========================
+/******************** C API COMPATIBILITY ********************/
 
 extern "C" {
 

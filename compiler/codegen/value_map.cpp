@@ -31,7 +31,7 @@ namespace codegen {
 /// Constructor
 ValueMap::ValueMap() {};
 
-// ======================== TYPE MAPPING ========================
+/******************** TYPE MAPPING ********************/
 
 llvm::Type* ValueMap::getLLVMType(const std::string& typeName, ContextManager& contextManager) {
     llvm::LLVMContext& ctx = contextManager.getContext();
@@ -83,7 +83,7 @@ llvm::Type* ValueMap::getPointerType(const std::string& baseTypeName, ContextMan
     return llvm::PointerType::get(contextManager.getContext(), 0);
 }
 
-// ======================== POINTER TYPE HELPERS ========================
+/******************** POINTER TYPE HELPERS ********************/
 
 llvm::Type* ValueMap::getElementTypeFromPointer(
     llvm::Value* pointerValue,
@@ -110,7 +110,7 @@ std::string ValueMap::getPointeeType(const std::string& pointerType) {
     return pointerType;
 }
 
-// ======================== VARIABLE MANAGEMENT ========================
+/******************** VARIABLE MANAGEMENT ********************/
 
 void ValueMap::addVariable(const std::string& name, llvm::Value* value, const std::string& type) {
     namedValues[name] = value;
@@ -136,7 +136,7 @@ void ValueMap::removeVariable(const std::string& name) {
     namedTypes.erase(name);
 }
 
-// ======================== FUNCTION MANAGEMENT ========================
+/******************** FUNCTION MANAGEMENT ********************/
 
 void ValueMap::addFunction(const std::string& name, llvm::Function* function) {
     functions[name] = function;
@@ -155,7 +155,7 @@ void ValueMap::removeFunction(const std::string& name) {
     functions.erase(name);
 }
 
-// ======================== SCOPE MANAGEMENT ========================
+/******************** SCOPE MANAGEMENT ********************/
 
 std::map<std::string, llvm::Value*> ValueMap::saveScope() const {
     return namedValues;
