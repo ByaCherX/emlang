@@ -151,7 +151,7 @@ public:
 
 } // namespace emlang
 
-// ======================== C API COMPATIBILITY ========================
+/******************** C API COMPATIBILITY ********************/
 
 extern "C" {
 

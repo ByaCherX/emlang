@@ -136,7 +136,7 @@ public:
      */
     ~CodegenErrorReporter() = default;
 
-    // ======================== ERROR REPORTING ========================
+    /******************** ERROR REPORTING ********************/
 
     /**
      * @brief Reports an error with automatic context detection
@@ -164,7 +164,7 @@ public:
      */
     void info(const std::string& message);
 
-    // ======================== ERROR MANAGEMENT ========================
+    /******************** ERROR MANAGEMENT ********************/
 
     /**
      * @brief Checks if any errors have been reported
@@ -195,7 +195,7 @@ public:
      */
     void clearErrors();
 
-    // ======================== OUTPUT CONTROL ========================
+    /******************** OUTPUT CONTROL ********************/
 
     /**
      * @brief Sets whether to print errors immediately
@@ -221,7 +221,7 @@ public:
      */
     void printSummary(std::ostream& stream = std::cerr) const;
 
-    // ======================== CONTEXT MANAGEMENT ========================
+    /******************** CONTEXT MANAGEMENT ********************/
 
     /**
      * @brief Sets the current code generation context
@@ -247,14 +247,14 @@ public:
     void popContext();
 
 private:
-    // ======================== INTERNAL STATE ========================
+    /******************** INTERNAL STATE ********************/
 
     std::vector<CodegenError> errors_;
     std::vector<std::string> warnings_;
     std::vector<std::string> contextStack_;
     bool immediateOutput_;
 
-    // ======================== HELPER METHODS ========================
+    /******************** HELPER METHODS ********************/
 
     /**
      * @brief Converts error type to string
@@ -270,7 +270,7 @@ private:
     std::string getCurrentContextString() const;
 };
 
-// ======================== UTILITY FUNCTIONS ========================
+/******************** UTILITY FUNCTIONS ********************/
 
 /**
  * @brief Creates a type mismatch error message

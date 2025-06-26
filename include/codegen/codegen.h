@@ -21,6 +21,7 @@
 #include "value_map.h"
 #include "codegen_error.h"
 #include "builtins_integration.h"
+#include "aot_compiler.h"
 #include "CGExpr.h"
 #include "CGDecl.h"
 #include "CGStmt.h"
@@ -41,6 +42,7 @@
 
 #include <llvm/IR/Value.h>
 #include <llvm/IR/Function.h>
+#include <llvm/Support/Error.h>
 
 // Re-enable warnings
 #ifdef _MSC_VER
@@ -50,6 +52,9 @@
 
 namespace emlang {
 namespace codegen {
+
+// Forward declarations
+std::string toString(llvm::Error err);
 
 /**
  * @class CodeGenerator
@@ -72,8 +77,9 @@ private:
     std::unique_ptr<CGStmt> stmtGenerator;
     std::unique_ptr<CGBase> programGenerator;    
       
-    // Backend components - temporarily disabled until implementation is complete
-    // std::unique_ptr<AOTCompiler> aotBackend;
+    // Backend components
+    std::unique_ptr<AOTCompiler> aotBackend;
+    // JIT backend still experimental
     // std::unique_ptr<jit::JITEngine> jitBackend;
 
     llvm::Value* currentValue;
@@ -82,7 +88,7 @@ private:
     llvm::Function* currentFunction;
 
 public:
-    // ======================== CONSTRUCTION AND LIFECYCLE ========================
+    /******************** CONSTRUCTION AND LIFECYCLE ********************/
 
     /**
      * @brief Constructs a new CodeGenerator instance
@@ -96,7 +102,7 @@ public:
      */
     ~CodeGenerator() = default;
 
-    // ======================== PRIMARY CODE GENERATION ========================
+    /******************** PRIMARY CODE GENERATION ********************/
 
     /**
      * @brief Generates LLVM IR from an EMLang program AST
@@ -112,26 +118,10 @@ public:
      */
     void printIR() const;
 
-    // ======================== EXECUTION ========================
-
-    /**
-     * @brief Generates code object file from the LLVM IR
-     * @param filename Path to the output object file (typically .o extension)
-     *
-     * Compiles the LLVM IR to native machine code and writes it as an
-     * object file suitable for linking. The process includes:
-     * - Target machine configuration
-     * - Instruction selection and scheduling
-     * - Register allocation
-     * - Assembly generation
-     * - Object file format generation
-     *
-     * The generated object files can be linked with standard system linkers
-     * to create executable programs or shared libraries.
-     */
-    void writeCodeToFile(const std::string& filename, bool emitLLVM = false);    
+    /******************** EXECUTION ********************/
+    // JIT not implemented yet  
     
-    // ======================== BACKEND MANAGEMENT ========================
+    /******************** BACKEND MANAGEMENT ********************/
     // Backend functionality temporarily disabled until implementation is complete
 
     /**
@@ -139,59 +129,28 @@ public:
      */
     bool compileAOT(const std::string& outputPath);
 
-    /**
-     * @brief Initializes JIT backend (temporarily disabled)
-     */
-    bool initializeJIT();
+    /** @brief Initializes AOT backend */
+    bool initializeAOTBackend();
 
-    // ======================== ERROR HANDLING ========================
+    /******************** COMPONENT ACCESS ********************/
 
-    /**
-     * @brief Gets the error reporter
-     * @return Reference to the error reporter
-     */
-    CodegenErrorReporter& getErrorReporter() { return *errorReporter; }
-
-    /**
-     * @brief Checks if any errors occurred during code generation
-     * @return true if errors exist, false otherwise
-     */
-    bool hasErrors() const;
-
-    // ======================== COMPONENT ACCESS ========================
-
-    /**
-     * @brief Gets the expression generator
-     * @return Reference to the expression generator
-     */
+    /** @brief Gets the expression generator */
     CGExpr& getExprGenerator() { return *exprGenerator; }
 
-    /**
-     * @brief Gets the declaration generator
-     * @return Reference to the declaration generator
-     */
+    /** @brief Gets the declaration generator */
     CGDecl& getDeclGenerator() { return *declGenerator; }
 
-    /**
-     * @brief Gets the statement generator
-     * @return Reference to the statement generator
-     */
+    /** @brief Gets the statement generator */
     CGStmt& getStmtGenerator() { return *stmtGenerator; }
 
-    /**
-     * @brief Gets the context manager
-     * @return Reference to the context manager
-     */
+    /** @brief Gets the context manager */
     ContextManager& getContextManager() { return *contextManager; }
 
-    /**
-     * @brief Gets the value map
-     * @return Reference to the value map
-     */
+    /** @brief Gets the value map */
     ValueMap& getValueMap() { return *valueMap; }
 
 private:
-    // ======================== ERROR HANDLING ========================
+    /******************** ERROR HANDLING ********************/
 
     /**
      * @brief Reports an error and sets currentValue to nullptr
@@ -207,19 +166,20 @@ private:
      */
     void error(CodegenErrorType type, const std::string& message, const std::string& context = "");
 
-    // ======================== BACKEND HELPERS ========================
+    /**
+     * @brief Gets the error reporter
+     * @return Reference to the error reporter
+     */
+    CodegenErrorReporter& getErrorReporter() { return *errorReporter; }
 
     /**
-     * @brief Initializes AOT backend
-     * @return true if initialization succeeded
+     * @brief Checks if any errors occurred during code generation
+     * @return true if errors exist, false otherwise
      */
-    bool initializeAOTBackend();
+    bool hasErrors() const;
 
-    /**
-     * @brief Ensures module is ready for backend processing
-     * @return true if module is valid
-     */
-    bool prepareModuleForBackend();
+    /******************** UTILITY METHODS ********************/
+    std::string toString(llvm::Error err);
 };
 
 } // namespace codegen

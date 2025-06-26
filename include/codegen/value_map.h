@@ -54,7 +54,7 @@ public:
      */
     ~ValueMap() = default;
 
-    // ======================== VARIABLE MANAGEMENT ========================
+    /******************** VARIABLE MANAGEMENT ********************/
 
     /**
      * @brief Registers a variable with its LLVM value and EMLang type
@@ -91,7 +91,7 @@ public:
      */
     void removeVariable(const std::string& name);
 
-    // ======================== FUNCTION MANAGEMENT ========================
+    /******************** FUNCTION MANAGEMENT ********************/
 
     /**
      * @brief Registers a function with its LLVM function
@@ -120,7 +120,7 @@ public:
      */
     void removeFunction(const std::string& name);
 
-    // ======================== SCOPE MANAGEMENT ========================
+    /******************** SCOPE MANAGEMENT ********************/
 
     /**
      * @brief Saves current variable scope state
@@ -144,7 +144,7 @@ public:
      */
     void clearAll();
 
-    // ======================== TYPE MAPPING ========================
+    /******************** TYPE MAPPING ********************/
 
     /**
      * @brief Maps EMLang type name to LLVM type
@@ -162,7 +162,7 @@ public:
      */
     llvm::Type* getPointerType(const std::string& baseTypeName, class ContextManager& contextManager);
 
-    // ======================== POINTER TYPE HELPERS ========================
+    /******************** POINTER TYPE HELPERS ********************/
 
     /**
      * @brief Gets element type from pointer value

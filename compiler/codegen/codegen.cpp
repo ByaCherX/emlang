@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "codegen/codegen.h"
-// Backend includes temporarily disabled until implementation is complete
-// #include "codegen/aot_compiler.h"
+#include "codegen/aot_compiler.h"
+// JIT backend still experimental
 // #include "codegen/jit/jit_engine.h"
 #include "ast.h"
 
@@ -27,6 +27,15 @@
 
 namespace emlang {
 namespace codegen {
+
+// Helper function to convert LLVM Error to string
+std::string toString(llvm::Error err) {
+    std::string result;
+    llvm::handleAllErrors(std::move(err), [&](const llvm::ErrorInfoBase& info) {
+        result = info.message();
+    });
+    return result;
+}
 
 /******************************
 * CONSTRUCTION AND LIFECYCLE
@@ -52,9 +61,9 @@ CodeGenerator::CodeGenerator(const std::string& moduleName)
         exprGenerator.get(), declGenerator.get(), stmtGenerator.get()
     );
     
-    // Initialize backends - TODO: Implement backends fully
-    // AOT backend temporarily disabled until implementation is complete
-    // initializeAOTBackend();
+    // Initialize AOT backend
+    aotBackend = std::make_unique<AOTCompiler>();
+    initializeAOTBackend();
     
     currentFunction = nullptr;
     currentExpressionType.clear();
@@ -72,18 +81,10 @@ void CodeGenerator::generateIR(Program& program) {
     // Use the program orchestrator to generate IR using visitor pattern
     program.accept(*programGenerator);
     
-    // Run optimization passes if requested
-    contextManager->runOptimizationPasses();
-    
     // Verify the module - simplified approach
     if (llvm::verifyModule(*contextManager->getModule(), &llvm::errs())) {
         errorReporter->error(CodegenErrorType::InternalError, "Module verification failed");
         return;
-    }
-    
-    // Prepare module for backend processing
-    if (!prepareModuleForBackend()) {
-        errorReporter->error(CodegenErrorType::InternalError, "Failed to prepare module for backend");
     }
 }
 
@@ -94,15 +95,7 @@ void CodeGenerator::printIR() const {
 /******************************
 * EXECUTION
 ******************************/
-
-void CodeGenerator::writeCodeToFile(const std::string& filename, bool emitLLVM) {
-    if (emitLLVM) {
-        contextManager->writeIRToFile(filename);
-    }    else {
-        // Use fallback to context manager's writeObjectFile
-        contextManager->writeObjectFile(filename);
-    }
-}
+// Currently JIT not implemented
 
 /******************************
 * ERROR HANDLING
@@ -126,9 +119,39 @@ void CodeGenerator::error(CodegenErrorType type, const std::string& message, con
 ******************************/
 
 bool CodeGenerator::compileAOT(const std::string& outputPath) {
-    // AOT backend temporarily disabled until implementation is complete
-    error("AOT backend is currently disabled (implementation in progress)");
-    return false;
+    // Ensure AOT backend is initialized and ready
+    if (!initializeAOTBackend()) {
+        error("Failed to initialize AOT backend");
+        return false;
+    }
+    
+    auto* module = contextManager->getModule();
+    if (!module) {
+        error("No module available for AOT compilation");
+        return false;
+    }
+    
+    // Determine output format based on file extension
+    OutputFormat format = OutputFormat::Object;
+    if (outputPath.size() >= 3 && outputPath.substr(outputPath.size() - 3) == ".ll") {
+        format = OutputFormat::LLVM_IR;
+    } else if (outputPath.size() >= 3 && outputPath.substr(outputPath.size() - 3) == ".bc") {
+        format = OutputFormat::Bitcode;
+    } else if ((outputPath.size() >= 2 && outputPath.substr(outputPath.size() - 2) == ".s") || 
+               (outputPath.size() >= 4 && outputPath.substr(outputPath.size() - 4) == ".asm")) {
+        format = OutputFormat::Assembly;
+    } else if ((outputPath.size() >= 4 && outputPath.substr(outputPath.size() - 4) == ".exe") || 
+               outputPath.find('.') == std::string::npos) {
+        format = OutputFormat::Executable;
+    }
+    
+    // Compile using AOT backend
+    if (auto err = this->aotBackend->compileModule(*module, outputPath, format)) {
+        error("AOT compilation failed: " + ::emlang::codegen::toString(std::move(err)));
+        return false;
+    }
+    
+    return true;
 }
 
 bool CodeGenerator::initializeJIT() {
@@ -142,25 +165,15 @@ bool CodeGenerator::initializeJIT() {
 ******************************/
 
 bool CodeGenerator::initializeAOTBackend() {
-    // AOT backend temporarily disabled until implementation is complete
-    error("AOT backend initialization is currently disabled");
-    return false;
-}
-
-bool CodeGenerator::prepareModuleForBackend() {
-    auto* module = contextManager->getModule();
-    if (!module) {
+    if (!this->aotBackend) {
+        error("AOT backend not created");
         return false;
     }
     
-    // Verify module before backend processing
-    if (llvm::verifyModule(*module, &llvm::errs())) {
-        error("Module verification failed during backend preparation");
+    if (auto err = this->aotBackend->initialize()) {
+        error("AOT backend initialization failed: " + ::emlang::codegen::toString(std::move(err)));
         return false;
     }
-    
-    // Additional preparation steps could be added here
-    // For example: symbol resolution, metadata generation, etc.
     
     return true;
 }
