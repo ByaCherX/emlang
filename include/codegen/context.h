@@ -44,7 +44,7 @@ private:
     std::unique_ptr<llvm::Module> module;        ///< LLVM module containing all generated functions and globals
     std::unique_ptr<llvm::IRBuilder<>> builder;  ///< LLVM IR builder for convenient instruction generation
 
-    // ======================== INITIALIZATION HELPERS ========================
+    /******************** INITIALIZATION HELPERS ********************/
 
     void initializeTargets();                    ///< Initializes target-specific components
     void registerBuiltinFunctions();             ///< Registers built-in functions as extern declarations
@@ -62,7 +62,7 @@ public:
      */
     ~ContextManager() = default;
 
-    // ======================== LLVM COMPONENT ACCESS ========================
+    /******************** LLVM COMPONENT ACCESS ********************/
 
     /**
      * @brief Gets the LLVM context
@@ -82,7 +82,7 @@ public:
      */
     llvm::IRBuilder<>& getBuilder() const { return *builder; }    
     
-    // ======================== ALLOCA HELPER ========================
+    /******************** ALLOCA HELPER ********************/
 
     /**
      * @brief Creates an alloca instruction in function entry block
@@ -93,31 +93,12 @@ public:
      */
     llvm::Value* createEntryBlockAlloca(llvm::Function* function, const std::string& varName, llvm::Type* type);
 
-    // ======================== OPTIMIZATION CONTROL ========================
-
-    /**
-     * @brief Applies optimization passes based on current level
-     */
-    void runOptimizationPasses();
-
-    // ======================== OUTPUT GENERATION ========================
+    /******************** OUTPUT GENERATION ********************/
 
     /**
      * @brief Prints LLVM IR to standard output
      */
     void printIR() const;
-
-    /**
-     * @brief Writes LLVM IR to file
-     * @param filename Output file path
-     */
-    void writeIRToFile(const std::string& filename) const;
-
-    /**
-     * @brief Writes object file
-     * @param filename Output object file path
-     */
-    void writeObjectFile(const std::string& filename) const;
 
 };
 
