@@ -71,14 +71,14 @@ namespace codegen {
  * 
  * **Usage Example:**
  * ```cpp
- * AOTCompiler compiler(OptimizationLevel::O2);
+ * AOTCompiler compiler();
  * compiler.initialize();
  * compiler.compileModule(module, "output.o", OutputFormat::ObjectFile);
  * ```
  */
 class AOTCompiler {
 private:
-    codegen::OptLevel optimizationLevel_;
+    OptLevel optimizationLevel_;
     std::string targetTriple_;
     std::unique_ptr<llvm::TargetMachine> targetMachine_;
 
@@ -86,11 +86,10 @@ private:
     size_t modulesCompiled_;
     
 public:
-    // ======================== CONSTRUCTION AND LIFECYCLE ========================
+    /******************** CONSTRUCTION AND LIFECYCLE ********************/
 
     /**
      * @brief Constructs an AOT compiler
-     * @param optLevel Optimization level
      * @param targetTriple Target triple (empty for native)
      */
     explicit AOTCompiler(const std::string& targetTriple = "");
@@ -108,7 +107,7 @@ public:
     AOTCompiler(AOTCompiler&&) = default;
     AOTCompiler& operator=(AOTCompiler&&) = default;
 
-    // ======================== INITIALIZATION ========================
+    /******************** INITIALIZATION ********************/
 
     /**
      * @brief Initializes the AOT compiler
@@ -129,7 +128,7 @@ public:
     bool isReady() const;
 
 
-    // ======================== COMPILATION ========================
+    /******************** COMPILATION ********************/
 
     /**
      * @brief Compiles a single module
@@ -160,49 +159,14 @@ public:
      */
     llvm::Error linkModules(llvm::Module& destination, llvm::Module& source);
 
-    // ======================== OUTPUT GENERATION ========================
+    /******************** OPTIMIZATION ********************/
 
-    /**
-     * @brief Generates an object file
-     * @param module Module to compile
-     * @param outputPath Output object file path
-     * @return Error if generation failed
-     */
-    llvm::Error generateObjectFile(llvm::Module& module, const std::string& outputPath);
+    
+    /** @brief Sets the optimization level */
+    void setOptimizationLevel(OptLevel level);
 
-    /**
-     * @brief Generates an assembly file
-     * @param module Module to compile
-     * @param outputPath Output assembly file path
-     * @return Error if generation failed
-     */
-    llvm::Error generateAssemblyFile(llvm::Module& module, const std::string& outputPath);
-
-    /**
-     * @brief Generates an executable file
-     * @param module Module to compile
-     * @param outputPath Output executable path
-     * @return Error if generation failed
-     */
-    llvm::Error generateExecutable(llvm::Module& module, const std::string& outputPath);
-
-    /**
-     * @brief Generates an LLVM IR file
-     * @param module Module to output
-     * @param outputPath Output IR file path
-     * @return Error if generation failed
-     */
-    llvm::Error generateIRFile(llvm::Module& module, const std::string& outputPath);
-
-    /**
-     * @brief Generates an LLVM bitcode file
-     * @param module Module to compile
-     * @param outputPath Output bitcode file path
-     * @return Error if generation failed
-     */
-    llvm::Error generateBitcodeFile(llvm::Module& module, const std::string& outputPath);
-
-    // ======================== OPTIMIZATION ========================
+    /** @return Current optimization level */
+    OptLevel getOptimizationLevel() const;
 
     /**
      * @brief Verifies a module for correctness
@@ -218,19 +182,7 @@ public:
      */
     llvm::Error applyOptimizations(llvm::Module& module);
 
-    // ======================== CONFIGURATION ========================
-
-    /**
-     * @brief Sets the optimization level
-     * @param level New optimization level
-     */
-    void setOptimizationLevel(codegen::OptLevel level);
-
-    /**
-     * @brief Gets the current optimization level
-     * @return Current optimization level
-     */
-    codegen::OptLevel getOptimizationLevel() const;
+    /******************** CONFIGURATION ********************/
 
     /**
      * @brief Sets the target triple
@@ -250,7 +202,7 @@ public:
      */
     llvm::TargetMachine* getTargetMachine() const;
 
-    // ======================== DIAGNOSTICS ========================
+    /******************** DIAGNOSTICS ********************/
 
     /**
      * @brief Gets compiler statistics
@@ -275,7 +227,7 @@ public:
     void clearStatistics();
 
 private:
-    // ======================== INITIALIZATION HELPERS ========================
+    /******************** INITIALIZATION HELPERS ********************/
 
     /**
      * @brief Sets up the target machine
@@ -289,7 +241,7 @@ private:
      */
     llvm::Error setupOptimizationPipeline();
 
-    // ======================== OUTPUT HELPERS ========================
+    /******************** OUTPUT HELPERS ********************/
 
     /**
      * @brief Links object file to create executable
@@ -299,7 +251,7 @@ private:
      */
     llvm::Error linkExecutable(const std::string& objectPath, const std::string& executablePath);
 
-    // ======================== OPTIMIZATION HELPERS ========================
+    /******************** OPTIMIZATION HELPERS ********************/
 
     /**
      * @brief Adds optimization passes to pass managers

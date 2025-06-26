@@ -48,7 +48,7 @@
 namespace emlang {
 namespace codegen {
 
-// ======================== CONSTRUCTION ========================
+/******************** CONSTRUCTION ********************/
 
 ContextManager::ContextManager(const std::string& moduleName)
     : context(std::make_unique<llvm::LLVMContext>()),
@@ -59,7 +59,7 @@ ContextManager::ContextManager(const std::string& moduleName)
     registerBuiltinFunctions();
 }
 
-// ======================== ALLOCA HELPER ========================
+/******************** ALLOCA HELPER ********************/
 
 llvm::Value* ContextManager::createEntryBlockAlloca(llvm::Function* function, 
                                                        const std::string& varName, 
@@ -68,78 +68,13 @@ llvm::Value* ContextManager::createEntryBlockAlloca(llvm::Function* function,
     return tmpBuilder.CreateAlloca(type, nullptr, varName);
 }
 
-// ======================== OPTIMIZATION CONTROL ========================
-
-void ContextManager::runOptimizationPasses() {
-    throw std::runtime_error("Optimization passes are not supported in ContextManager.");
-}
-
-// ======================== OUTPUT GENERATION ========================
+/******************** IR HELPER ********************/
 
 void ContextManager::printIR() const {
     module->print(llvm::outs(), nullptr);
 }
 
-void ContextManager::writeIRToFile(const std::string& filename) const {
-    std::error_code errorCode;
-    llvm::raw_fd_ostream file(filename, errorCode, llvm::sys::fs::OF_None);
-    
-    if (errorCode) {
-        std::cerr << "Error opening file: " << errorCode.message() << std::endl;
-        return;
-    }
-    
-    module->print(file, nullptr);
-}
-
-void ContextManager::writeObjectFile(const std::string& filename) const {
-    // Initialize the target registry
-    llvm::InitializeNativeTarget();
-    llvm::InitializeNativeTargetAsmPrinter();
-    llvm::InitializeNativeTargetAsmParser();
-
-    
-    auto targetTriple = llvm::Triple::getArchTypeName(llvm::Triple::x86_64); //getDefaultTargetTriple();
-    module->setTargetTriple(targetTriple);
-    
-    std::string error;
-    auto target = llvm::TargetRegistry::lookupTarget(targetTriple, error);
-    
-    if (!target) {
-        std::cerr << "Error: " << error << std::endl;
-        return;
-    }
-    
-    auto CPU = "generic";    
-    auto features = "";
-    
-    llvm::TargetOptions opt;
-    std::optional<llvm::Reloc::Model> RM = std::nullopt;
-    auto targetMachine = target->createTargetMachine(targetTriple, CPU, features, opt, RM);
-    
-    module->setDataLayout(targetMachine->createDataLayout());
-    
-    std::error_code errorCode;
-    llvm::raw_fd_ostream dest(filename, errorCode, llvm::sys::fs::OF_None);
-    
-    if (errorCode) {
-        std::cerr << "Could not open file: " << errorCode.message() << std::endl;
-        return;
-    }
-    
-    llvm::legacy::PassManager pass;
-    auto fileType = llvm::CodeGenFileType::ObjectFile;
-    
-    if (targetMachine->addPassesToEmitFile(pass, dest, nullptr, fileType)) {
-        std::cerr << "TargetMachine can't emit a file of this type" << std::endl;
-        return;
-    }
-    
-    pass.run(*module);
-    dest.flush();
-}
-
-// ======================== INITIALIZATION HELPERS ========================
+/******************** INITIALIZATION HELPERS ********************/
 
 void ContextManager::initializeTargets() {
     llvm::InitializeNativeTarget();

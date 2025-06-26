@@ -14,7 +14,7 @@
 
 namespace emlang {
 
-// ======================== CodegenError Implementation ========================
+/******************** CodegenError Implementation ********************/
 
 CodegenError::CodegenError(CodegenErrorType type, const std::string& message, const std::string& context)
     : std::runtime_error(message), type_(type), context_(context) {}
@@ -91,7 +91,7 @@ std::string CodegenError::errorTypeToString(CodegenErrorType type) {
     }
 }
 
-// ======================== CodegenErrorReporter Implementation ========================
+/******************** CodegenErrorReporter Implementation ********************/
 
 CodegenErrorReporter::CodegenErrorReporter() : immediateOutput_(false) {}
 
@@ -235,7 +235,7 @@ std::string CodegenErrorReporter::getCurrentContextString() const {
     return oss.str();
 }
 
-// ======================== Utility Functions ========================
+/******************** Utility Functions ********************/
 
 std::string makeTypeMismatchError(const std::string& expected, const std::string& actual) {
     return "Expected type '" + expected + "', but got '" + actual + "'";

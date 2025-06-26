@@ -127,7 +127,8 @@ public:
     // ========================================================
     // AST Visitor Method Declarations (Pure Virtual)
     // ========================================================
-      // Program visitor - must be implemented by concrete classes
+      
+    // Program visitor - must be implemented by concrete classes
     void visit(Program& node) override;
 
     // Expression visitors - default empty implementations for non-expression visitors

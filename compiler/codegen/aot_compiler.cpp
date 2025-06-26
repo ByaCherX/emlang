@@ -49,10 +49,11 @@
 namespace emlang {
 namespace codegen {
 
-// ======================== CONSTRUCTION AND LIFECYCLE ========================
+/******************** CONSTRUCTION AND LIFECYCLE ********************/
 
 AOTCompiler::AOTCompiler(const std::string& targetTriple)
-    : targetTriple_(targetTriple.empty() ? llvm::sys::getDefaultTargetTriple() : targetTriple),
+    : optimizationLevel_(OptLevel::None),
+      targetTriple_(targetTriple.empty() ? llvm::sys::getDefaultTargetTriple() : targetTriple),
       targetMachine_(nullptr),
       isInitialized_(false),
       modulesCompiled_(0) {
@@ -60,7 +61,7 @@ AOTCompiler::AOTCompiler(const std::string& targetTriple)
 
 AOTCompiler::~AOTCompiler() = default;
 
-// ======================== INITIALIZATION ========================
+/******************** INITIALIZATION ********************/
 
 llvm::Error AOTCompiler::initialize() {
     if (isInitialized_) {
@@ -96,7 +97,7 @@ llvm::Error AOTCompiler::setupTargetMachine() {
     
     if (!target) {
         return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "Target lookup failed: " + error);
+            "Target lookup failed: " + error);
     }
 
     // Setup target options
@@ -118,7 +119,7 @@ llvm::Error AOTCompiler::setupTargetMachine() {
 
     if (!targetMachine_) {
         return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "Failed to create target machine");
+            "Failed to create target machine");
     }
 
     return llvm::Error::success();
@@ -129,13 +130,14 @@ llvm::Error AOTCompiler::setupOptimizationPipeline() {
     return llvm::Error::success();
 }
 
-// ======================== COMPILATION ========================
+/******************** COMPILATION ********************/
 
 llvm::Error AOTCompiler::compileModule(llvm::Module& module, const std::string& outputPath,
                                       OutputFormat format) {
+
     if (!isReady()) {
         return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "AOT compiler not initialized");
+            "AOT compiler not initialized");
     }
 
     // Verify module first
@@ -148,21 +150,75 @@ llvm::Error AOTCompiler::compileModule(llvm::Module& module, const std::string& 
         return err;
     }
 
+    // Open output file
+    std::error_code ec;
+    llvm::raw_fd_ostream dest(outputPath, ec, llvm::sys::fs::OF_None);
+    if (ec) {
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+            "Could not open file: " + ec.message());
+    }
+
+    // Set up the module's data layout and target triple
+    module.setDataLayout(this->targetMachine_->createDataLayout());
+    module.setTargetTriple(this->targetTriple_);
+
+    // Create a legacy pass manager for code generation
+    llvm::legacy::PassManager passManager;
+
+    // Add target machine passes
+    passManager.add(llvm::createTargetTransformInfoWrapperPass(
+        targetMachine_->getTargetIRAnalysis()
+    ));
+
     // Generate output based on format
     switch (format) {
         case OutputFormat::LLVM_IR:
-            return generateIRFile(module, outputPath);
+            module.print(dest, nullptr);
+            dest.close();
+
+            ++modulesCompiled_;
+            return llvm::Error::success();
         case OutputFormat::Bitcode:
-            return generateBitcodeFile(module, outputPath);
+            llvm::WriteBitcodeToFile(module, dest);
+            dest.close();
+
+            ++modulesCompiled_;
+            return llvm::Error::success();
         case OutputFormat::Object:
-            return generateObjectFile(module, outputPath);
+            if (targetMachine_->addPassesToEmitFile(
+                    passManager, dest, nullptr, llvm::CodeGenFileType::ObjectFile)
+                ) {
+                return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                    "Target machine cannot emit object files");
+            }
+            // Run the passes
+            passManager.run(module);
+            dest.close();
+
+            ++modulesCompiled_;
+            return llvm::Error::success();
         case OutputFormat::Assembly:
-            return generateAssemblyFile(module, outputPath);
+            if (targetMachine_->addPassesToEmitFile(passManager, dest, nullptr,
+                    llvm::CodeGenFileType::AssemblyFile)
+                ) {
+                return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                    "Target machine cannot emit assembly files");
+            }
+            // Run the passes
+            passManager.run(module);
+            dest.close();
+
+            ++modulesCompiled_;
+            return llvm::Error::success();
         case OutputFormat::Executable:
-            return generateExecutable(module, outputPath);
-        default:
+        /* Executable not supported yet */
+            dest.close();
             return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                         "Unsupported output format");
+                "Executable generation requires system linker integration");
+        default:
+            dest.close();
+            return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                "Unsupported output format");
     }
 }
 
@@ -171,7 +227,7 @@ llvm::Error AOTCompiler::compileModules(const std::vector<llvm::Module*>& module
                                        OutputFormat format) {
     if (modules.empty()) {
         return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "No modules to compile");
+            "No modules to compile");
     }
 
     if (modules.size() == 1) {
@@ -200,132 +256,21 @@ llvm::Error AOTCompiler::linkModules(llvm::Module& destination, llvm::Module& so
     // Link the modules
     if (linker.linkInModule(std::move(sourceClone))) {
         return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "Failed to link modules");
+            "Failed to link modules");
     }
 
     return llvm::Error::success();
 }
 
-// ======================== OUTPUT GENERATION ========================
+/******************** OPTIMIZATION ********************/
 
-llvm::Error AOTCompiler::generateObjectFile(llvm::Module& module, const std::string& outputPath) {
-    std::error_code ec;
-    llvm::raw_fd_ostream dest(outputPath, ec, llvm::sys::fs::OF_None);
-    
-    if (ec) {
-        return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "Could not open file: " + ec.message());
-    }
-
-    // Set up the module's data layout and target triple
-    module.setDataLayout(targetMachine_->createDataLayout());
-    module.setTargetTriple(targetTriple_);
-
-    // Create a legacy pass manager for code generation
-    llvm::legacy::PassManager passManager;
-    
-    // Add target transform info
-    passManager.add(llvm::createTargetTransformInfoWrapperPass(
-        targetMachine_->getTargetIRAnalysis()));
-
-    // Add the target machine's passes for object file generation
-    if (targetMachine_->addPassesToEmitFile(passManager, dest, nullptr,
-                                          llvm::CodeGenFileType::ObjectFile)) {
-        return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "Target machine cannot emit object files");
-    }
-
-    // Run the passes
-    passManager.run(module);
-    dest.close();
-
-    ++modulesCompiled_;
-    return llvm::Error::success();
+void AOTCompiler::setOptimizationLevel(OptLevel level) {
+    optimizationLevel_ = level;
 }
 
-llvm::Error AOTCompiler::generateAssemblyFile(llvm::Module& module, const std::string& outputPath) {
-    std::error_code ec;
-    llvm::raw_fd_ostream dest(outputPath, ec, llvm::sys::fs::OF_None);
-    
-    if (ec) {
-        return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "Could not open file: " + ec.message());
-    }
-
-    // Set up the module's data layout and target triple
-    module.setDataLayout(targetMachine_->createDataLayout());
-    module.setTargetTriple(targetTriple_);
-
-    // Create a legacy pass manager for code generation
-    llvm::legacy::PassManager passManager;
-    
-    // Add target transform info
-    passManager.add(llvm::createTargetTransformInfoWrapperPass(
-        targetMachine_->getTargetIRAnalysis()));
-
-    // Add the target machine's passes for assembly generation
-    if (targetMachine_->addPassesToEmitFile(passManager, dest, nullptr,
-                                          llvm::CodeGenFileType::AssemblyFile)) {
-        return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "Target machine cannot emit assembly files");
-    }
-
-    // Run the passes
-    passManager.run(module);
-    dest.close();
-
-    ++modulesCompiled_;
-    return llvm::Error::success();
+OptLevel AOTCompiler::getOptimizationLevel() const {
+    return optimizationLevel_;
 }
-
-llvm::Error AOTCompiler::generateExecutable(llvm::Module& module, const std::string& outputPath) {
-    // First generate an object file
-    std::string objPath = outputPath + ".o";
-    if (auto err = generateObjectFile(module, objPath)) {
-        return err;
-    }
-
-    // For now, we'll just generate the object file
-    // In a full implementation, we would invoke the system linker here
-    // to create the final executable
-    
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                 "Executable generation requires system linker integration");
-}
-
-llvm::Error AOTCompiler::generateIRFile(llvm::Module& module, const std::string& outputPath) {
-    std::error_code ec;
-    llvm::raw_fd_ostream dest(outputPath, ec, llvm::sys::fs::OF_None);
-    
-    if (ec) {
-        return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "Could not open file: " + ec.message());
-    }
-    
-    module.print(dest, nullptr);
-    dest.close();
-    
-    ++modulesCompiled_;
-    return llvm::Error::success();
-}
-
-llvm::Error AOTCompiler::generateBitcodeFile(llvm::Module& module, const std::string& outputPath) {
-    std::error_code ec;
-    llvm::raw_fd_ostream dest(outputPath, ec, llvm::sys::fs::OF_None);
-    
-    if (ec) {
-        return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "Could not open file: " + ec.message());
-    }
-    
-    llvm::WriteBitcodeToFile(module, dest);
-    dest.close();
-    
-    ++modulesCompiled_;
-    return llvm::Error::success();
-}
-
-// ======================== OPTIMIZATION ========================
 
 llvm::Error AOTCompiler::verifyModule(llvm::Module& module) {
     if (llvm::verifyModule(module, &llvm::errs())) {
@@ -393,15 +338,7 @@ llvm::Error AOTCompiler::applyOptimizations(llvm::Module& module) {
     return llvm::Error::success();
 }
 
-// ======================== CONFIGURATION ========================
-
-void AOTCompiler::setOptimizationLevel(codegen::OptLevel level) {
-    optimizationLevel_ = level;
-}
-
-codegen::OptLevel AOTCompiler::getOptimizationLevel() const {
-    return optimizationLevel_;
-}
+/******************** CONFIGURATION ********************/
 
 void AOTCompiler::setTargetTriple(const std::string& targetTriple) {
     targetTriple_ = targetTriple;
@@ -415,7 +352,7 @@ llvm::TargetMachine* AOTCompiler::getTargetMachine() const {
     return targetMachine_.get();
 }
 
-// ======================== DIAGNOSTICS ========================
+/******************** DIAGNOSTICS ********************/
 
 std::string AOTCompiler::getStatistics() const {
     std::ostringstream oss;
@@ -439,7 +376,7 @@ void AOTCompiler::clearStatistics() {
     modulesCompiled_ = 0;
 }
 
-// ======================== OPTIMIZATION HELPERS ========================
+/******************** OPTIMIZATION HELPERS ********************/
 
 void AOTCompiler::addOptimizationPasses(llvm::legacy::PassManager& modulePassManager,
                                         llvm::legacy::FunctionPassManager& functionPassManager) {
