@@ -200,6 +200,38 @@ StatementPtr Parser::parseVariableDeclaration() {
     ExpressionPtr initializer = nullptr;
     if (match(TokenType::ASSIGN)) {
         initializer = parseExpression();
+        if (type.empty()) {
+            // If no type was specified, infer type from initializer
+            if (auto literalExpr = dynamic_cast<LiteralExpr*>(initializer.get())) {
+                switch (literalExpr->literalType) {
+                    case LiteralType::INT:
+                        type = "int";
+                        break;
+                    case LiteralType::FLOAT:
+                        type = "float";
+                        break;
+                    case LiteralType::CHAR:
+                        type = "char";
+                        break;
+                    case LiteralType::STR:
+                        type = "str";
+                        break;
+                    case LiteralType::BOOL:
+                        type = "bool";
+                        break;
+                    case LiteralType::NULL_LITERAL:
+                        type = "null";
+                        break;
+                    default:
+                        type = "object"; // For other complex types
+                        break;
+                }
+            } else {
+                // For non-literal expressions, try to infer from context
+                // Default to object type for complex expressions
+                type = "object";
+            }
+        }
     }
     
     consume(TokenType::SEMICOLON, "Expected ';' after variable declaration");
@@ -419,7 +451,7 @@ ExpressionPtr Parser::parseUnary() {
         return std::make_unique<UnaryOpExpr>(tokenToBinOp(op), std::move(right), op.line, op.column);
     }
     
-#ifdef EMLANG_ENABLE_POINTERS
+#ifdef EMLANG_FEATURE_POINTERS
     // Pointer dereference (*ptr)
     if (match(TokenType::MULTIPLY)) {
         Token op = tokens[current - 1];
@@ -661,7 +693,7 @@ ExpressionPtr Parser::parseObjectLiteral() {
         } else {
             error("Expected identifier or string literal for object key");
         }
-          consume(TokenType::COLON, "Expected ':' after object key");
+        consume(TokenType::COLON, "Expected ':' after object key");
         ExpressionPtr value = parseExpression();
         
         fields.emplace_back(key, std::move(value));
