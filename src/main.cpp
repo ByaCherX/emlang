@@ -134,7 +134,7 @@ int main(int argc, char* argv[]) {
         emlang::Lexer lexer(source);
         auto tokens = lexer.tokenize();
         
-        // Syntax analysis
+        // Parse the tokens
         emlang::Parser parser(tokens);
         auto ast = parser.parse();
         
@@ -170,13 +170,14 @@ int main(int argc, char* argv[]) {
         if (options.debug) {
             codegen.printIR();
         }
-          // Output generation
+          
+        // Output generation
         if (options.emitLLVM) {
-            codegen.writeCodeToFile(options.outputFile, true);
+            codegen.compileAOT(options.outputFile);
             std::cout << "LLVM IR written to: " << options.outputFile << std::endl;
         } else {
             try {
-                codegen.writeCodeToFile(options.outputFile, false);
+                codegen.compileAOT(options.outputFile);
                 std::cout << "Object file written to: " << options.outputFile << std::endl;
             } catch (const std::exception& e) {
                 std::cout << "Warning: Object file generation failed: " << e.what() << std::endl;
@@ -184,7 +185,7 @@ int main(int argc, char* argv[]) {
                 
                 // Fallback to LLVM IR
                 std::string llvmFile = options.inputFile.substr(0, options.inputFile.find_last_of('.')) + ".ll";
-                codegen.writeCodeToFile(llvmFile, true);
+                codegen.compileAOT(llvmFile);
                 std::cout << "LLVM IR written to: " << llvmFile << std::endl;
             }
         }
