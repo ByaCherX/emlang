@@ -23,7 +23,7 @@ BEGIN
             VALUE "LegalCopyright",    EMLANG_COPYRIGHT "\0"
             VALUE "OriginalFilename",  "emlang.exe\0"
             VALUE "ProductName",       "EMLang Compiler\0"
-            VALUE "ProductVersion",    "1.0.0-alpha.8 (d9bfe32)\0"
+            VALUE "ProductVersion",    "1.0.0-alpha.9 (220139de)\0"
             VALUE "Comments",          EMLANG_COMMENTS "\0"
         END
     END

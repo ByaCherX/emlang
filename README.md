@@ -2,7 +2,7 @@
 
 ![LLVM Logo](https://llvm.org/img/LLVMWyvernSmall.png)
 
-# EMLang
+# EMLang [⚠️ Active development canceled]
 
 **A Modern Systems Programming Language with LLVM Backend**
 
@@ -10,7 +10,7 @@
 [![LLVM](https://img.shields.io/badge/LLVM-17+-blue.svg)](https://llvm.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![C++](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](#prerequisites)
-[![v1.0.0](https://img.shields.io/badge/EMLang_Version-1.0.0.alpha.8-purple.svg)](version)
+[![v1.0.0](https://img.shields.io/badge/EMLang_Version-1.0.0.alpha.9-purple.svg)](version)
 
 EMLang is a statically-typed systems programming language designed for high-performance applications with ahead-of-time (AOT) compilation using LLVM. It combines modern language features with C-like performance and memory control.
 
@@ -218,6 +218,9 @@ sudo make install
 
 ### 📝 Language Examples
 
+> [!Note]
+> Pointers are experimental, define a CMAKE Flag to enable them.
+
 #### Complete Program
 ```emlang
 extern function printf(format: str): int32;
@@ -287,28 +290,42 @@ LEFT_BRACE { 1:24
 ```
 
 #### AST Visualization
-```bash
+```md
 $ ./emlang_check --ast simple_test.em
 === AST ===
 Program
-  FunctionDeclaration: main
-    ReturnType: int32
-    Parameters: []
-    Body: BlockStatement
-      ReturnStatement
-        LiteralExpression: 0 (int32)
+ \-stmt0:   ExternFunctionDecl <line:3, col:17> name='emlang_print_int' return='void'
+   \-param0: value: int32
+ \-stmt1:   ExternFunctionDecl <line:4, col:17> name='emlang_print_str' return='void'
+   \-param0: str_param: char*
+ \-stmt2:   ExternFunctionDecl <line:5, col:17> name='emlang_println' return='void'
+ \-stmt3:   FunctionDecl name='main' return='int32'
+   \-body:     BlockStmt <line:7, col:24>
+     \-stmt0:       VarDecl <line:9, col:9> let x type='int32'
+       \-init:         LiteralExpr <line:9, col:20> value='10'
+     \-stmt1:       ExprStmt
+       \-expr:         FunctionCallExpr <line:10, col:5> name='emlang_print_str'
+         \-arg0:           LiteralExpr <line:10, col:22> value='Initial x value: '
+     \-stmt2:       ExprStmt
+       \-expr:         FunctionCallExpr <line:11, col:5> name='emlang_print_int'
+         \-arg0:           IdentifierExpr <line:11, col:22> name='x'
+     \-stmt3:       ExprStmt
+       \-expr:         FunctionCallExpr <line:12, col:5> name='emlang_println'
+     \-stmt4:       ExprStmt
+       \-expr:         AssignmentExpr
+         \-target:          IdentifierExpr <line:15, col:5> name='x'
+         \-value:           LiteralExpr <line:15, col:9> value='20'
+     \-stmt5:       ExprStmt
+       \-expr:         FunctionCallExpr <line:16, col:5> name='emlang_print_str'
+         \-arg0:           LiteralExpr <line:16, col:22> value='After assignment x = 20: '
+     \-stmt6:       ExprStmt
+       \-expr:         FunctionCallExpr <line:17, col:5> name='emlang_print_int'
+         \-arg0:           IdentifierExpr <line:17, col:22> name='x'
+     \-stmt7:       ExprStmt
+       \-expr:         FunctionCallExpr <line:18, col:5> name='emlang_println'
+     \-stmt8:       ReturnStmt <line:20, col:5>
+       \-value:         LiteralExpr <line:20, col:12> value='0'
 ```
-
-## 📊 Compiler Pipeline
-
-The EMLang compiler implements a complete compilation pipeline:
-
-1. **📝 Lexical Analysis** → Token stream generation
-2. **🌳 Syntax Analysis** → Abstract Syntax Tree construction  
-3. **🔍 Semantic Analysis** → Type checking and symbol resolution
-4. **⚡ Code Generation** → LLVM IR emission
-5. **🎯 Optimization** → LLVM optimization passes
-6. **🔧 Linking** → Native executable generation
 
 ### 🚨 Error Reporting
 
