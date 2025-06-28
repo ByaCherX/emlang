@@ -29,7 +29,7 @@ void CGExpr::visit(LiteralExpr& node) {
             try {
                 int intValue = std::stoi(node.value);
                 currentValue = llvm::ConstantInt::get(contextManager.getContext(), llvm::APInt(32, intValue, true));
-                currentExpressionType = "i32";
+                currentExpressionType = "int32";
             } catch (const std::exception& e) {
                 error(CodegenErrorType::TypeMismatch, "Invalid integer number: " + node.value);
                 return;
@@ -40,7 +40,7 @@ void CGExpr::visit(LiteralExpr& node) {
             try {
                 double floatValue = std::stod(node.value);
                 currentValue = llvm::ConstantFP::get(contextManager.getContext(), llvm::APFloat(floatValue));
-                currentExpressionType = "f64";
+                currentExpressionType = "float";
             } catch (const std::exception& e) {
                 error(CodegenErrorType::TypeMismatch, "Invalid floating point number: " + node.value);
                 return;

@@ -43,20 +43,21 @@ llvm::Type* ValueMap::getLLVMType(const std::string& typeName, ContextManager& c
     }
 
     // Handle basic types
-    if (typeName == "i8") return llvm::Type::getInt8Ty(ctx);
-    if (typeName == "i16") return llvm::Type::getInt16Ty(ctx);
-    if (typeName == "i32") return llvm::Type::getInt32Ty(ctx);
-    if (typeName == "i64") return llvm::Type::getInt64Ty(ctx);
-    if (typeName == "isize") return llvm::Type::getIntNTy(ctx, sizeof(void*) * 8);
+    if (typeName == "int8") return llvm::Type::getInt8Ty(ctx);
+    if (typeName == "int16") return llvm::Type::getInt16Ty(ctx);
+    if (typeName == "int32") return llvm::Type::getInt32Ty(ctx);
+    if (typeName == "int64") return llvm::Type::getInt64Ty(ctx);
+    if (typeName == "size_t") return llvm::Type::getIntNTy(ctx, sizeof(void*) * 8);
     
-    if (typeName == "u8") return llvm::Type::getInt8Ty(ctx);
-    if (typeName == "u16") return llvm::Type::getInt16Ty(ctx);
-    if (typeName == "u32") return llvm::Type::getInt32Ty(ctx);
-    if (typeName == "u64") return llvm::Type::getInt64Ty(ctx);
-    if (typeName == "usize") return llvm::Type::getIntNTy(ctx, sizeof(void*) * 8);
     
-    if (typeName == "f32") return llvm::Type::getFloatTy(ctx);
-    if (typeName == "f64") return llvm::Type::getDoubleTy(ctx);
+    if (typeName == "uint8") return llvm::Type::getInt8Ty(ctx);
+    if (typeName == "uint16") return llvm::Type::getInt16Ty(ctx);
+    if (typeName == "uint32") return llvm::Type::getInt32Ty(ctx);
+    if (typeName == "uint64") return llvm::Type::getInt64Ty(ctx);
+    if (typeName == "usize_t") return llvm::Type::getIntNTy(ctx, sizeof(void*) * 8);
+    
+    if (typeName == "float") return llvm::Type::getFloatTy(ctx);
+    if (typeName == "double") return llvm::Type::getDoubleTy(ctx);
     
     if (typeName == "bool") return llvm::Type::getInt1Ty(ctx);
     if (typeName == "char") return llvm::Type::getInt8Ty(ctx);

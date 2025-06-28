@@ -52,7 +52,7 @@ llvm::Value* CGDecl::generateVariableDecl(VariableDecl& node) {
             node.initializer->accept(*this);
             // Convert currentValue to constant if it's not already
             if (auto constVal = llvm::dyn_cast<llvm::Constant>(currentValue)) {
-                initVal = constVal;            
+                initVal = constVal;
             } else {
                 error(CodegenErrorType::InternalError, 
                       "Global variable initializer must be a constant: " + node.name);
@@ -79,7 +79,7 @@ llvm::Value* CGDecl::generateVariableDecl(VariableDecl& node) {
             initVal,
             node.name
         );
-          // Remember the global variable in value map
+        // Remember the global variable in value map
         valueMap.addVariable(node.name, globalVar, typeStr);
         currentValue = globalVar;
     } else {
@@ -87,7 +87,7 @@ llvm::Value* CGDecl::generateVariableDecl(VariableDecl& node) {
         llvm::Value* initVal = nullptr;
         if (node.initializer) {
             node.initializer->accept(*this);
-            initVal = currentValue;        
+            initVal = currentValue;
         } 
         else {
             // Default initialization for local variables - use null/zero constants
@@ -101,17 +101,19 @@ llvm::Value* CGDecl::generateVariableDecl(VariableDecl& node) {
                 initVal = llvm::UndefValue::get(llvmType);
             }
         }
-          if (!initVal) {
+        if (!initVal) {
             error(CodegenErrorType::InternalError, 
                   "Failed to generate initial value for variable: " + node.name);
             return nullptr;
         }
-          // Create alloca for the local variable - simplified approach
+          
+        // Create alloca for the local variable - simplified approach
         llvm::IRBuilder<> tmpBuilder(&currentFunction->getEntryBlock(), currentFunction->getEntryBlock().begin());
         llvm::Value* alloca = tmpBuilder.CreateAlloca(llvmType, nullptr, node.name);
         
         // Store initial value using context manager's builder
-        contextManager.getBuilder().CreateStore(initVal, alloca);          // Remember the variable in value map
+        contextManager.getBuilder().CreateStore(initVal, alloca);
+        // Remember the variable in value map
         valueMap.addVariable(node.name, alloca, typeStr);
         currentValue = alloca;
     }
@@ -131,7 +133,7 @@ llvm::Function* CGDecl::generateFunctionDecl(FunctionDecl& node) {
     
     std::string returnTypeStr = node.returnType.value_or("void"); // Default to void if no return type
     llvm::Type* returnType = valueMap.getLLVMType(returnTypeStr, contextManager);
-      if (!returnType) {
+    if (!returnType) {
         error(CodegenErrorType::UnknownType, "Unknown return type: " + returnTypeStr + " in function: " + node.name);
         return nullptr;
     }

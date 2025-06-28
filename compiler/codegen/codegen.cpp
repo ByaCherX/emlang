@@ -13,6 +13,14 @@
 // #include "codegen/jit/jit_engine.h"
 #include "ast.h"
 
+// Disable LLVM warnings
+#ifdef _MSC_VER
+    #pragma warning(push)
+    #pragma warning(disable: 4624) // destructor was implicitly deleted
+    #pragma warning(disable: 4244) // conversion warnings
+    #pragma warning(disable: 4267) // size_t conversion warnings
+#endif
+
 #include <llvm/IR/Verifier.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/ADT/APInt.h>
@@ -22,6 +30,11 @@
 #include <llvm/IR/Function.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/GlobalVariable.h>
+
+// Re-enable warnings
+#ifdef _MSC_VER
+    #pragma warning(pop)
+#endif
 
 #include <iostream>
 
@@ -152,12 +165,6 @@ bool CodeGenerator::compileAOT(const std::string& outputPath) {
     }
     
     return true;
-}
-
-bool CodeGenerator::initializeJIT() {
-    // JIT is experimental and disabled for now
-    error("JIT backend is currently disabled (experimental feature)");
-    return false;
 }
 
 /******************************
