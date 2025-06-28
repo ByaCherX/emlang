@@ -8,192 +8,11 @@
 
 using namespace emlang;
 
-// AST writer visitor class
-/*class ASTPrinter : public ASTVisitor {
-private:
-    int indent = 0;
-    
-    void printIndent() {
-        for (int i = 0; i < indent; ++i) {
-            std::cout << "  ";
-        }
-    }
-    
-public:
-    void visit(LiteralExpr& node) override {
-        printIndent();
-        std::cout << "LiteralExpr: " << node.value << std::endl;
-    }
-    
-    void visit(IdentifierExpr& node) override {
-        printIndent();
-        std::cout << "IdentifierExpr: " << node.name << std::endl;
-    }
-    
-    void visit(BinaryOpExpr& node) override {
-        printIndent();
-        std::cout << "BinaryOpExpr: " << node.operator_ << std::endl;
-        indent++;
-        node.left->accept(*this);
-        node.right->accept(*this);
-        indent--;
-    }
-    
-    void visit(UnaryOpExpr& node) override {
-        printIndent();
-        std::cout << "UnaryOpExpr: " << node.operator_ << std::endl;
-        indent++;
-        node.operand->accept(*this);
-        indent--;
-    }
-    
-#ifdef EMLANG_FEATURE_POINTERS
-    void visit(DereferenceExpr& node) override {
-        printIndent();
-        std::cout << "DereferenceExpr: *" << std::endl;
-        indent++;
-        node.operand->accept(*this);
-        indent--;
-    }
-    
-    void visit(AddressOfExpr& node) override {
-        printIndent();
-        std::cout << "AddressOfExpr: &" << std::endl;
-        indent++;
-        node.operand->accept(*this);
-        indent--;
-    }
-#endif // EMLANG_FEATURE_POINTERS
-
-    void visit(AssignmentExpr& node) override {
-        printIndent();
-        std::cout << "AssignmentExpr: =" << std::endl;
-        indent++;
-        node.target->accept(*this);
-        node.value->accept(*this);
-        indent--;
-    }
-    
-    void visit(FunctionCallExpr& node) override {
-        printIndent();
-        std::cout << "FunctionCallExpr: " << node.functionName << std::endl;
-        indent++;
-        for (auto& arg : node.arguments) {
-            arg->accept(*this);
-        }
-        indent--;
-    }
-    
-    void visit(VariableDecl& node) override {
-        printIndent();
-        std::cout << "VariableDecl: " << (node.isConstant ? "const " : "let ") 
-                  << node.name << ": " << node.type << std::endl;
-        if (node.initializer) {
-            indent++;
-            node.initializer->accept(*this);
-            indent--;
-        }
-    }
-    
-    void visit(FunctionDecl& node) override {
-        printIndent();
-        std::cout << "FunctionDecl: " << node.name << std::endl;
-        indent++;
-        for (auto& param : node.parameters) {
-            printIndent();
-            std::cout << "Parameter: " << param.name << ": " << param.type << std::endl;
-        }
-        if (node.body) {
-            node.body->accept(*this);
-        }
-        indent--;
-    }
-    
-    void visit(ExternFunctionDecl& node) override {
-        printIndent();
-        std::cout << "ExternFunctionDecl: " << node.name << std::endl;
-        indent++;
-        for (auto& param : node.parameters) {
-            printIndent();
-            std::cout << "Parameter: " << param.name << ": " << param.type << std::endl;
-        }
-        if (!node.returnType.empty()) {
-            printIndent();
-            std::cout << "ReturnType: " << node.returnType << std::endl;
-        }
-        indent--;
-    }
-    
-    void visit(BlockStmt& node) override {
-        printIndent();
-        std::cout << "BlockStmt:" << std::endl;
-        indent++;
-        for (auto& stmt : node.statements) {
-            stmt->accept(*this);
-        }
-        indent--;
-    }
-    
-    void visit(IfStmt& node) override {
-        printIndent();
-        std::cout << "IfStmt:" << std::endl;
-        indent++;
-        std::cout << "Condition:" << std::endl;
-        node.condition->accept(*this);
-        std::cout << "Then:" << std::endl;
-        node.thenBranch->accept(*this);
-        if (node.elseBranch) {
-            std::cout << "Else:" << std::endl;
-            node.elseBranch->accept(*this);
-        }
-        indent--;
-    }
-    
-    void visit(WhileStmt& node) override {
-        printIndent();
-        std::cout << "WhileStmt:" << std::endl;
-        indent++;
-        std::cout << "Condition:" << std::endl;
-        node.condition->accept(*this);
-        std::cout << "Body:" << std::endl;
-        node.body->accept(*this);
-        indent--;
-    }
-    
-    void visit(ReturnStmt& node) override {
-        printIndent();
-        std::cout << "ReturnStmt:" << std::endl;
-        if (node.value) {
-            indent++;
-            node.value->accept(*this);
-            indent--;
-        }
-    }
-    
-    void visit(ExpressionStmt& node) override {
-        printIndent();
-        std::cout << "ExpressionStmt:" << std::endl;
-        indent++;
-        node.expression->accept(*this);
-        indent--;
-    }
-    
-    void visit(Program& node) override {
-        std::cout << "Program:" << std::endl;
-        indent++;
-        for (auto& stmt : node.statements) {
-            stmt->accept(*this);
-        }
-        indent--;
-    }
-};
-*/
-
 // Token printer function
 static void printTokens(const std::vector<Token>& tokens) {
     std::cout << "=== TOKENS ===" << std::endl;
     for (const auto& token : tokens) {
-        std::cout << token.toString() << std::endl;
+        std::cout << token.toString() << std::endl << std::flush;
     }
     std::cout << std::endl;
 }
@@ -290,10 +109,11 @@ int main(int argc, char* argv[]) {
         auto tokens = lexer.tokenize();
         
         if (options.showTokens) {
-            printTokens(tokens);
+            //printTokens(tokens);
+            std::cout << "Currently showing tokens is disabled. (token printing throwing error)" << std::endl;
         }
         
-        // Syntax Anylysis
+        // Parsing
         if (options.showAST) {
             emlang::Parser parser(tokens);
             auto ast = parser.parse();
