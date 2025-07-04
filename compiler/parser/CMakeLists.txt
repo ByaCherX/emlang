@@ -27,6 +27,7 @@ target_compile_definitions(emlang_parser PRIVATE EMLANG_EXPORTS)
 set_target_properties(emlang_parser PROPERTIES
     CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON
+    POSITION_INDEPENDENT_CODE ON
 )
 
 # Enable comprehensive warnings

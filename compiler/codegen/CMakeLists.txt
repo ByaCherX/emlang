@@ -67,6 +67,13 @@ set(CODEGEN_HEADERS
 # Create the codegen library
 add_library(emlang_codegen OBJECT ${CODEGEN_SOURCES} ${CODEGEN_HEADERS})
 
+# Set target properties
+set_target_properties(emlang_codegen PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+    POSITION_INDEPENDENT_CODE ON
+)
+
 # Include directories
 target_include_directories(emlang_codegen PUBLIC
     ${CMAKE_SOURCE_DIR}/include

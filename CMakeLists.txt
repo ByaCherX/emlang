@@ -70,6 +70,9 @@ if(LLVM_FOUND)
         
         transformutils scalaropts instcombine ipo
         mc asmprinter asmparser
+        
+        # Pass builder and analysis passes - needed for optimization
+        passes
     )
     set(LLVM_LIBRARIES ${llvm_libs})
     set(LLVM_ENABLED TRUE)
