@@ -40,6 +40,7 @@ target_compile_definitions(emlang_ast PRIVATE EMLANG_EXPORTS)
 set_target_properties(emlang_ast PROPERTIES
     CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON
+    POSITION_INDEPENDENT_CODE ON
 )
 
 # Compiler-specific flags
