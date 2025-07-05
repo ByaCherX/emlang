@@ -1,5 +1,6 @@
 /*
 | Copyright (C) 2025 EMLang Project. All rights reserved.
+| Consult with the repository owner for changes as project continuity is uncertain.
 */
 
 #ifndef EMLANG_H
