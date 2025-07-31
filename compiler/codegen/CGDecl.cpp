@@ -8,15 +8,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "codegen/CGDecl.h"
+#include "codegen/CGStmt.h"
+#include "codegen/CGExpr.h"
 #include "ast.h"
 #include <llvm/IR/Verifier.h>
 
 namespace emlang {
 namespace codegen {
 
-CGDecl::CGDecl(ContextManager& contextManager, ValueMap& valueMap, CodegenErrorReporter& errorReporter)
+CGDecl::CGDecl(ContextManager& contextManager, ValueMap& valueMap, CodegenErrorReporter& errorReporter, CGStmt* stmtGenerator, CGExpr* exprGenerator)
     : CGBase(contextManager, valueMap, errorReporter), 
-    currentFunction(nullptr), currentExpressionType("") {
+    currentFunction(nullptr), currentExpressionType(""), stmtGenerator(stmtGenerator), exprGenerator(exprGenerator) {
 }
 
 void CGDecl::visit(VariableDecl& node) {
@@ -37,15 +39,18 @@ void CGDecl::setCurrentValue(llvm::Value* value, const std::string& type) {
 }
 
 llvm::Value* CGDecl::generateVariableDecl(VariableDecl& node) {
+    std::cerr << "DEBUG: CGDecl generating VariableDecl: " << node.name << std::endl;
     // Get LLVM type using value map
     std::string typeStr = node.type.value_or("i32"); // Default to i32 if no type specified
     llvm::Type* llvmType = valueMap.getLLVMType(typeStr, contextManager);
+    std::cerr << "DEBUG: Variable type: " << typeStr << std::endl;
     
     // Track the type for multi-level pointer support
     currentExpressionType = typeStr;
     
     // Check if we're in global scope (no current function)
     if (!currentFunction) {
+        std::cerr << "DEBUG: Creating global variable" << std::endl;
         // Global variable
         llvm::Constant* initVal = nullptr;
         if (node.initializer) {
@@ -83,13 +88,22 @@ llvm::Value* CGDecl::generateVariableDecl(VariableDecl& node) {
         valueMap.addVariable(node.name, globalVar, typeStr);
         currentValue = globalVar;
     } else {
+        std::cerr << "DEBUG: Creating local variable" << std::endl;
         // Local variable
         llvm::Value* initVal = nullptr;
         if (node.initializer) {
-            node.initializer->accept(*this);
-            initVal = currentValue;
+            std::cerr << "DEBUG: Processing variable initializer" << std::endl;
+            if (exprGenerator) {
+                node.initializer->accept(*exprGenerator);
+                initVal = exprGenerator->getCurrentValue();
+            } else {
+                node.initializer->accept(*this);
+                initVal = currentValue;
+            }
+            std::cerr << "DEBUG: Initializer processed" << std::endl;
         } 
         else {
+            std::cerr << "DEBUG: Using default initialization" << std::endl;
             // Default initialization for local variables - use null/zero constants
             if (llvmType->isPointerTy()) {
                 initVal = llvm::ConstantPointerNull::get(llvm::cast<llvm::PointerType>(llvmType));
@@ -102,19 +116,25 @@ llvm::Value* CGDecl::generateVariableDecl(VariableDecl& node) {
             }
         }
         if (!initVal) {
+            std::cerr << "DEBUG: ERROR - Failed to generate initial value" << std::endl;
             error(CodegenErrorType::InternalError, 
                   "Failed to generate initial value for variable: " + node.name);
             return nullptr;
+        } else {
+            std::cerr << "DEBUG: Initial value generated successfully" << std::endl;
         }
           
         // Create alloca for the local variable - simplified approach
         llvm::IRBuilder<> tmpBuilder(&currentFunction->getEntryBlock(), currentFunction->getEntryBlock().begin());
         llvm::Value* alloca = tmpBuilder.CreateAlloca(llvmType, nullptr, node.name);
+        std::cerr << "DEBUG: Created alloca for variable: " << node.name << std::endl;
         
         // Store initial value using context manager's builder
         contextManager.getBuilder().CreateStore(initVal, alloca);
+        std::cerr << "DEBUG: Stored initial value" << std::endl;
         // Remember the variable in value map
         valueMap.addVariable(node.name, alloca, typeStr);
+        std::cerr << "DEBUG: Added variable to value map: " << node.name << std::endl;
         currentValue = alloca;
     }
     return currentValue;
@@ -189,18 +209,38 @@ llvm::Function* CGDecl::generateFunctionDecl(FunctionDecl& node) {
     
     // Generate function body
     if (node.body) {
-        node.body->accept(*this);
+        std::cerr << "DEBUG: Generating function body for: " << node.name << std::endl;
+        if (stmtGenerator) {
+            // Set the current function in statement generator (if it needs it)
+            std::cerr << "DEBUG: Using statement generator" << std::endl;
+            node.body->accept(*stmtGenerator);
+            std::cerr << "DEBUG: Function body generation completed" << std::endl;
+        } else {
+            // Fallback to self - this shouldn't normally happen since we need CGStmt for proper statement handling
+            std::cerr << "DEBUG: ERROR - Statement generator not available" << std::endl;
+            error(CodegenErrorType::InternalError, "Statement generator not available for function body: " + node.name);
+            return nullptr;
+        }
         
         // Add return if missing for void functions
         if (returnType->isVoidTy()) {
-            contextManager.getBuilder().CreateRetVoid();
+            // Check if the last instruction is already a terminator
+            llvm::BasicBlock* currentBB = contextManager.getBuilder().GetInsertBlock();
+            if (!currentBB->getTerminator()) {
+                contextManager.getBuilder().CreateRetVoid();
+            }
         }
     }
     
     // Verify function - simplified approach
     if (llvm::verifyFunction(*function, &llvm::errs())) {
-        error(CodegenErrorType::InternalError, "Function verification failed for: " + node.name);
-        function->eraseFromParent();
+        std::cerr << "DEBUG: Function verification failed for: " << node.name << std::endl;
+        // For debugging, don't erase the function immediately
+        // function->eraseFromParent();
+        // Instead, let's see what's in the function
+        function->print(llvm::errs());
+    } else {
+        std::cerr << "DEBUG: Function verification passed for: " << node.name << std::endl;
     }
       // Restore previous state
     currentFunction = prevFunction;

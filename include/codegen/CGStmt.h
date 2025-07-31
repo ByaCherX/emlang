@@ -40,6 +40,8 @@ namespace codegen {
 
 // Forward declaration for expression generator
 class CGExpr;
+// Forward declaration for declaration generator
+class CGDecl;
 
 /**
  * @class CGStmt
@@ -52,6 +54,7 @@ class CGExpr;
 class CGStmt : public CGBase {
 private:
     CGExpr& exprGenerator;
+    CGDecl* declGenerator; // Optional reference for handling declarations
     llvm::BasicBlock* currentBlock;
 
 public:
@@ -63,8 +66,9 @@ public:
      * @param valueMap Reference to the value mapping system
      * @param errorReporter Reference to the error reporting system
      * @param exprGenerator Reference to the expression generator
+     * @param declGenerator Optional pointer to the declaration generator
      */
-    CGStmt(ContextManager& contextManager, ValueMap& valueMap, CodegenErrorReporter& errorReporter, CGExpr& exprGenerator);
+    CGStmt(ContextManager& contextManager, ValueMap& valueMap, CodegenErrorReporter& errorReporter, CGExpr& exprGenerator, CGDecl* declGenerator = nullptr);
 
     /**
      * @brief Default destructor
@@ -80,6 +84,11 @@ public:
     void visit(ForStmt& node) override;
     void visit(ReturnStmt& node) override;
     void visit(ExpressionStmt& node) override;
+    
+    // Declaration visitors - delegate to declaration generator
+    void visit(VariableDecl& node) override;
+    void visit(FunctionDecl& node) override;
+    void visit(ExternFunctionDecl& node) override;
 
     /******************** Utility Methods ********************/
 
@@ -94,6 +103,12 @@ public:
      * @param block LLVM basic block to set as current
      */
     void setCurrentBlock(llvm::BasicBlock* block) { currentBlock = block; }
+    
+    /**
+     * @brief Sets the declaration generator for delegation
+     * @param declGen Pointer to the declaration generator
+     */
+    void setDeclGenerator(CGDecl* declGen) { declGenerator = declGen; }
 
 private:
     /******************** Generation Methods ********************/

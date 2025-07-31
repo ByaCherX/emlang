@@ -9,14 +9,15 @@
 
 #include "codegen/CGStmt.h"
 #include "codegen/CGExpr.h"
+#include "codegen/CGDecl.h"
 #include "ast.h"
 
 namespace emlang {
 namespace codegen {
 
-CGStmt::CGStmt(ContextManager& contextManager, ValueMap& valueMap, CodegenErrorReporter& errorReporter, CGExpr& exprGenerator)
+CGStmt::CGStmt(ContextManager& contextManager, ValueMap& valueMap, CodegenErrorReporter& errorReporter, CGExpr& exprGenerator, CGDecl* declGenerator)
     : CGBase(contextManager, valueMap, errorReporter), 
-      exprGenerator(exprGenerator), currentBlock(nullptr) {
+      exprGenerator(exprGenerator), declGenerator(declGenerator), currentBlock(nullptr) {
 }
 
 void CGStmt::visit(BlockStmt& node) {
@@ -36,6 +37,7 @@ void CGStmt::visit(ForStmt& node) {
 }
 
 void CGStmt::visit(ReturnStmt& node) {
+    std::cerr << "DEBUG: CGStmt processing ReturnStmt" << std::endl;
     generateReturn(node);
 }
 
@@ -43,10 +45,46 @@ void CGStmt::visit(ExpressionStmt& node) {
     generateExpressionStmt(node);
 }
 
+// Declaration visitor delegates - forward to declaration generator
+void CGStmt::visit(VariableDecl& node) {
+    std::cerr << "DEBUG: CGStmt processing VariableDecl: " << node.name << std::endl;
+    if (declGenerator) {
+        node.accept(*declGenerator);
+        // Copy the result from declaration generator
+        currentValue = declGenerator->getCurrentValue();
+        std::cerr << "DEBUG: VariableDecl processed successfully" << std::endl;
+    } else {
+        std::cerr << "DEBUG: ERROR - Declaration generator not available" << std::endl;
+        error(CodegenErrorType::InternalError, "Declaration generator not available for variable: " + node.name);
+    }
+}
+
+void CGStmt::visit(FunctionDecl& node) {
+    if (declGenerator) {
+        node.accept(*declGenerator);
+        currentValue = declGenerator->getCurrentValue();
+    } else {
+        error(CodegenErrorType::InternalError, "Declaration generator not available for function: " + node.name);
+    }
+}
+
+void CGStmt::visit(ExternFunctionDecl& node) {
+    if (declGenerator) {
+        node.accept(*declGenerator);
+        currentValue = declGenerator->getCurrentValue();
+    } else {
+        error(CodegenErrorType::InternalError, "Declaration generator not available for extern function: " + node.name);
+    }
+}
+
 llvm::BasicBlock* CGStmt::generateBlock(BlockStmt& node) {
     auto prevNamedValues = valueMap.saveScope(); // Enter new scope for block
     
+    // Debug: Print number of statements in block
+    std::cerr << "DEBUG: Processing block with " << node.statements.size() << " statements" << std::endl;
+    
     for (auto& stmt : node.statements) {
+        std::cerr << "DEBUG: Processing statement..." << std::endl;
         stmt->accept(*this);
         
         // Check if we've already generated a terminator
@@ -218,23 +256,30 @@ llvm::BasicBlock* CGStmt::generateFor(ForStmt& node) {
 }
 
 llvm::Value* CGStmt::generateReturn(ReturnStmt& node) {
+    std::cerr << "DEBUG: Generating return statement" << std::endl;
     auto& builder = contextManager.getBuilder();
     
     if (node.value) {
-        node.value->accept(*this);        
+        std::cerr << "DEBUG: Processing return value expression" << std::endl;
+        node.value->accept(exprGenerator);        
+        currentValue = exprGenerator.getCurrentValue();
         if (!currentValue) {
             error(CodegenErrorType::InternalError, "Invalid return expression");
             return nullptr;
         }
+        std::cerr << "DEBUG: Creating return instruction" << std::endl;
         currentValue = builder.CreateRet(currentValue);    
     } else {
+        std::cerr << "DEBUG: Creating void return" << std::endl;
         currentValue = builder.CreateRetVoid();
     }
     return currentValue;
 }
 
 llvm::Value* CGStmt::generateExpressionStmt(ExpressionStmt& node) {
-    node.expression->accept(*this);
+    std::cerr << "DEBUG: Processing expression statement" << std::endl;
+    node.expression->accept(exprGenerator);
+    currentValue = exprGenerator.getCurrentValue();
     return currentValue;
 }
 

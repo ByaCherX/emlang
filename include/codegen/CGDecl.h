@@ -36,6 +36,11 @@ class ExternFunctionDecl;
 
 namespace codegen {
 
+// Forward declaration for statement code generator
+class CGStmt;
+// Forward declaration for expression code generator  
+class CGExpr;
+
 /**
  * @class CGDecl
  * @brief Declaration code generator implementing visitor pattern
@@ -48,6 +53,8 @@ class CGDecl : public CGBase {
 private:
     llvm::Function* currentFunction;
     std::string currentExpressionType; // Tracks the type of the current expression
+    CGStmt* stmtGenerator; // For generating function bodies
+    CGExpr* exprGenerator; // For generating expressions
 
 public:
     /******************** Constructor ********************/
@@ -57,8 +64,10 @@ public:
      * @param contextManager Reference to the LLVM context manager
      * @param valueMap Reference to the value mapping system
      * @param errorReporter Reference to the error reporting system
+     * @param stmtGenerator Pointer to the statement generator (can be null)
+     * @param exprGenerator Pointer to the expression generator (can be null)
      */
-    CGDecl(ContextManager& contextManager, ValueMap& valueMap, CodegenErrorReporter& errorReporter);
+    CGDecl(ContextManager& contextManager, ValueMap& valueMap, CodegenErrorReporter& errorReporter, CGStmt* stmtGenerator = nullptr, CGExpr* exprGenerator = nullptr);
 
     /**
      * @brief Default destructor
