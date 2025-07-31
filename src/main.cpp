@@ -39,6 +39,7 @@ static void printUsage(const char* programName) {
     std::cout << "  -O2                     Enable more optimizations" << std::endl;
     std::cout << "  -O3                     Enable aggressive optimizations" << std::endl;
     std::cout << "  --emit-llvm             Output LLVM IR instead of object file" << std::endl;
+    std::cout << "  --jit                   Execute using JIT compilation" << std::endl;
     std::cout << "  --debug                 Enable debug output" << std::endl;
     std::cout << "  -h, --help              Show this help message" << std::endl;
 }
@@ -47,6 +48,7 @@ struct CompilerOptions {
     std::string inputFile;
     std::string outputFile;
     bool emitLLVM = false;
+    bool jit = false;
     bool debug = false;
     bool showHelp = false;
 };
@@ -73,6 +75,8 @@ static CompilerOptions parseArguments(int argc, char* argv[]) {
             
         } else if (arg == "--emit-llvm") {
             options.emitLLVM = true;
+        } else if (arg == "--jit") {
+            options.jit = true;
         } else if (arg == "--debug") {
             options.debug = true;
         } else if (arg.substr(0, 1) == "-") {
@@ -116,7 +120,7 @@ int main(int argc, char* argv[]) {
         }
         
         // Determine output file name if not specified
-        if (options.outputFile.empty()) {
+        if (options.outputFile.empty() && !options.jit) {
             if (options.emitLLVM) {
                 options.outputFile = options.inputFile.substr(0, options.inputFile.find_last_of('.')) + ".ll";
             } else {
@@ -125,7 +129,9 @@ int main(int argc, char* argv[]) {
         }
         
         std::cout << "Compiling: " << options.inputFile << std::endl;
-        std::cout << "Output: " << options.outputFile << std::endl;
+        if (!options.jit) {
+            std::cout << "Output: " << options.outputFile << std::endl;
+        }
         
         // Read source file
         std::string source = readFile(options.inputFile);
@@ -171,11 +177,18 @@ int main(int argc, char* argv[]) {
             codegen.printIR();
         }
           
-        // Output generation
-        if (options.emitLLVM) {
+        // Output generation or execution
+        if (options.jit) {
+            // JIT execution
+            std::cout << "=== JIT EXECUTION ===" << std::endl;
+            int exitCode = codegen.executeJIT();
+            std::cout << "Program exited with code: " << exitCode << std::endl;
+        } else if (options.emitLLVM) {
+            // AOT compilation to LLVM IR
             codegen.compileAOT(options.outputFile);
             std::cout << "LLVM IR written to: " << options.outputFile << std::endl;
         } else {
+            // AOT compilation to object file
             try {
                 codegen.compileAOT(options.outputFile);
                 std::cout << "Object file written to: " << options.outputFile << std::endl;

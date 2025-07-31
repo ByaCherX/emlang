@@ -9,8 +9,7 @@
 
 #include "codegen/codegen.h"
 #include "codegen/aot_compiler.h"
-// JIT backend still experimental
-// #include "codegen/jit/jit_engine.h"
+#include "codegen/jit/jit_engine.h"
 #include "ast.h"
 
 // Disable LLVM warnings
@@ -78,6 +77,9 @@ CodeGenerator::CodeGenerator(const std::string& moduleName)
     aotBackend = std::make_unique<AOTCompiler>();
     initializeAOTBackend();
     
+    // Initialize JIT backend
+    jitBackend = std::make_unique<jit::JITEngine>();
+    
     currentFunction = nullptr;
     currentExpressionType.clear();
 }
@@ -108,7 +110,29 @@ void CodeGenerator::printIR() const {
 /******************************
 * EXECUTION
 ******************************/
-// Currently JIT not implemented
+
+int CodeGenerator::executeJIT() {
+    // Ensure JIT backend is initialized and ready
+    if (!initializeJITBackend()) {
+        error("Failed to initialize JIT backend");
+        return -1;
+    }
+    
+    auto* module = contextManager->getModule();
+    if (!module) {
+        error("No module available for JIT execution");
+        return -1;
+    }
+    
+    // Execute using JIT backend
+    auto result = jitBackend->executeModule(*module);
+    if (!result) {
+        error("JIT execution failed: " + ::emlang::codegen::toString(result.takeError()));
+        return -1;
+    }
+    
+    return *result;
+}
 
 /******************************
 * ERROR HANDLING
@@ -179,6 +203,20 @@ bool CodeGenerator::initializeAOTBackend() {
     
     if (auto err = this->aotBackend->initialize()) {
         error("AOT backend initialization failed: " + ::emlang::codegen::toString(std::move(err)));
+        return false;
+    }
+
+    return true;
+}
+
+bool CodeGenerator::initializeJITBackend() {
+    if (!this->jitBackend) {
+        error("JIT backend not created");
+        return false;
+    }
+    
+    if (auto err = this->jitBackend->initialize()) {
+        error("JIT backend initialization failed: " + ::emlang::codegen::toString(std::move(err)));
         return false;
     }
 
