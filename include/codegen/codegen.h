@@ -22,13 +22,11 @@
 #include "codegen_error.h"
 #include "builtins_integration.h"
 #include "aot_compiler.h"
+#include "jit/jit_engine.h"
 #include "CGExpr.h"
 #include "CGDecl.h"
 #include "CGStmt.h"
 #include "CGBase.h"
-// Backend includes temporarily disabled until implementation is complete  
-// #include "aot_compiler.h"
-// #include "jit/jit_engine.h"
 #include <memory>
 #include <string>
 
@@ -79,8 +77,7 @@ private:
       
     // Backend components
     std::unique_ptr<AOTCompiler> aotBackend;
-    // JIT backend still experimental
-    // std::unique_ptr<jit::JITEngine> jitBackend;
+    std::unique_ptr<jit::JITEngine> jitBackend;
 
     llvm::Value* currentValue;
     std::string currentExpressionType;
@@ -119,18 +116,25 @@ public:
     void printIR() const;
 
     /******************** EXECUTION ********************/
-    // JIT not implemented yet  
     
+    /**
+     * @brief Executes the generated code using JIT compilation
+     * @return Exit code from main function
+     */
+    int executeJIT();
+
     /******************** BACKEND MANAGEMENT ********************/
-    // Backend functionality temporarily disabled until implementation is complete
 
     /**
-     * @brief Compiles using AOT backend (temporarily disabled)
+     * @brief Compiles using AOT backend
      */
     bool compileAOT(const std::string& outputPath);
 
     /** @brief Initializes AOT backend */
     bool initializeAOTBackend();
+
+    /** @brief Initializes JIT backend */
+    bool initializeJITBackend();
 
     /******************** COMPONENT ACCESS ********************/
 

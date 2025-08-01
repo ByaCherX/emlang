@@ -38,6 +38,9 @@ set(CODEGEN_SOURCES
     
     # AOT backend
     aot_compiler.cpp
+    
+    # JIT backend
+    jit/jit_engine.cpp
     #target_config.cpp
 )
 
@@ -59,6 +62,7 @@ set(CODEGEN_HEADERS
     
     # Backend headers
     ${CMAKE_SOURCE_DIR}/include/codegen/aot_compiler.h
+    ${CMAKE_SOURCE_DIR}/include/codegen/jit/jit_engine.h
 
     # Final integration headers
     #${CMAKE_SOURCE_DIR}/include/codegen/builtins_integration.h
@@ -71,6 +75,7 @@ add_library(emlang_codegen OBJECT ${CODEGEN_SOURCES} ${CODEGEN_HEADERS})
 target_include_directories(emlang_codegen PUBLIC
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/include/codegen
+    ${CMAKE_SOURCE_DIR}/include/codegen/jit
 )
 
 # Export symbols when building DLL
@@ -101,6 +106,9 @@ if(ORCJIT_ENABLED)
         interpreter
     )
     set(LLVM_LIBRARIES ${llvm_orcjit_libs})
+    
+    # Make LLVM libraries available to parent scope
+    set(LLVM_LIBRARIES ${llvm_orcjit_libs} PARENT_SCOPE)
 
     # Link LLVM libraries
     target_link_libraries(emlang_codegen PRIVATE ${llvm_orcjit_libs})
