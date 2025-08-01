@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(EMLang VERSION 1.0.0 LANGUAGES CXX)
+project(EMLang VERSION 1.0.0 LANGUAGES C CXX)
 
 option(USE_CLANG "Use Clang compiler instead of default" OFF)
 option(BUILD_LIBRARY "Build EMLang standard library" OFF)
@@ -38,6 +38,9 @@ endif()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Enable position independent code for shared libraries
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 # For Windows DLL export/import symbols
 if(WIN32)
     add_definitions(-DWIN32_LEAN_AND_MEAN)
@@ -68,7 +71,7 @@ if(LLVM_FOUND)
 
         mcjit executionengine runtimedyld
         
-        transformutils scalaropts instcombine ipo
+        transformutils scalaropts instcombine ipo passes
         mc asmprinter asmparser
     )
     set(LLVM_LIBRARIES ${llvm_libs})

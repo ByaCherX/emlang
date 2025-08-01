@@ -99,18 +99,23 @@ void CGExpr::visit(LiteralExpr& node) {
 }
 
 void CGExpr::visit(IdentifierExpr& node) {
+    std::cerr << "DEBUG: CGExpr processing IdentifierExpr: " << node.name << std::endl;
     llvm::Value* value = valueMap.getVariable(node.name);
     if (!value) {
+        std::cerr << "DEBUG: Variable not found in value map: " << node.name << std::endl;
         error(CodegenErrorType::UndefinedSymbol, "Unknown variable name: " + node.name);
         return;
     }
     
     // Set the current expression type from value map for proper type tracking
     currentExpressionType = valueMap.getVariableType(node.name);
+    std::cerr << "DEBUG: Variable found, type: " << currentExpressionType << std::endl;
     
     // Load the value using context manager's builder with proper type
-    llvm::Type* loadType = value->getType();
+    llvm::Type* loadType = valueMap.getLLVMType(currentExpressionType, contextManager);
+    std::cerr << "DEBUG: Creating load instruction" << std::endl;
     currentValue = contextManager.getBuilder().CreateLoad(loadType, value, node.name);
+    std::cerr << "DEBUG: IdentifierExpr processing completed" << std::endl;
 }
 
 void CGExpr::visit(BinaryOpExpr& node) {
